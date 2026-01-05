@@ -1,0 +1,77 @@
+site_name: Amazon Quick Suite Knowledge Hub
+theme:
+  name: material
+  custom_dir: static/overrides
+  logo: quicksuite.png
+  favicon: quicksuite.png
+  palette:
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: white
+    accent: white
+    toggle:
+      icon: material/weather-night
+      name: "Switch to dark mode"
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: black
+    accent: black
+    toggle:
+      icon: material/weather-sunny
+      name: "Switch to light mode"
+docs_dir: docs
+extra_css:
+  - stylesheets/extra.css
+extra:
+  static_path: ../static
+plugins:
+  - search
+  - macros
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - tables
+  - fenced_code
+  - codehilite
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      url_download: True
+      url_request_headers:
+nav:
+  - Home: index.md
+  - Guidance:
+    - How to..: guidance/how-to.md
+  - Integration:
+    - Knowledge Base:
+      - Overview: integration/knowledge-base.md
+      - Confluence Cloud (Knowledge Only): integration/knowledge base/confluence-cloud-knowledge-only-setup-guide/README.md
+    - Actions:
+      - Overview: integration/actions.md
+      - ServiceNow(2LO): integration/actions/2lo-servicenow-action-setup-guide/README.md
+      - Asana: integration/actions/asana-action-setup-guide/README.md
+      - Box: integration/actions/box-action-setup-guide/README.md
+      - Confluence Cloud (Knowledge + Action): integration/actions/confluence-cloud-knowledge-action-setup-guide/README.md
+      - Jira Cloud: integration/actions/jira-cloud-action-setup-guide/README.md
+      - MS Outlook: integration/actions/ms-outlook-action-setup-guide/README.md
+      - MS Teams: integration/actions/ms-teams-action-setup-guide/README.md
+      - PagerDuty: integration/actions/pagerduty-action-setup-guide/README.md
+      - Salesforce: integration/actions/salesforce-action-setup-guide/README.md
+      - ServiceNow: integration/actions/servicenow-action-setup-guide/README.md
+      - Slack: integration/actions/slack-action-setup-guide/README.md
+      - Smartsheet: integration/actions/smartsheet-action-setup-guide/README.md
+  - Use Cases:
+    - use-cases/index.md
+    - Actuarial Analysis Solution: use-cases/actuarial-analysis-solution/README.md
+    - Bedrock KB Retrieval MCP: use-cases/bedrock-kb-retrieval-mcp/README.md
+    - Redshift Data Query MCP: use-cases/redshift-data-query-mcp/README.md
+  - Broadcast: broadcast.md
+repo_url: https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub
+edit_uri: edit/main/docs/
