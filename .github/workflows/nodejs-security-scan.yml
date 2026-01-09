@@ -83,7 +83,6 @@ jobs:
         if: (steps.changed-files.outputs.any_changed == 'true' || github.event_name == 'schedule') && steps.check-nodejs.outputs.has_nodejs == 'true'
         run: |
           echo "🔒 Running security scans on Node.js projects..."
-          mkdir -p security-results
           
           while IFS= read -r project; do
             if [ -f "$project/package.json" ]; then
@@ -95,12 +94,12 @@ jobs:
               
               # Run npm audit
               echo "📊 Running npm audit for $project"
-              npm audit --audit-level=moderate --json > "../security-results/npm-audit-$(basename $project).json"
+              npm audit --audit-level=moderate --json > "$GITHUB_WORKSPACE/npm-audit-$(basename $project).json" || true
               
               # Run ESLint security rules if available
               if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || [ -f "eslint.config.js" ]; then
                 echo "🔍 Running ESLint security scan for $project"
-                npx eslint . --ext .js,.jsx,.ts,.tsx --format json > "../security-results/eslint-$(basename $project).json"
+                npx eslint . --ext .js,.jsx,.ts,.tsx --format json > "$GITHUB_WORKSPACE/eslint-$(basename $project).json" || true
               fi
               
               cd - > /dev/null
@@ -112,7 +111,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nodejs-security-results
-          path: security-results/
+          path: |
+            npm-audit-*.json
+            eslint-*.json
           retention-days: 30
 
       - name: Skip message
