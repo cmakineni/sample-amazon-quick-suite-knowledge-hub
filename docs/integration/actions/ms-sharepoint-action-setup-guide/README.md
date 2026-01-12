@@ -2,37 +2,37 @@
 
 1. Sign in to the Microsoft Entra admin center as at least an Application Developer.
 
-2. Browse to **Entra ID** => **App registrations** and select **New registration**
+1. Browse to **Entra ID** => **App registrations** and select **New registration**
 
    Choose **Single tenant** and provide optional `Web` Redirect URI: `https://us-east-1.quicksight.aws.amazon.com/sn/oauthcallback`
 
    Click **Register** button:
 
-![App registration form](images/image_1.png)
+   ![App registration form](images/image_1.png)
 
-3. Navigate to this app registration => **API permissions** => **Add a permission** => **Microsoft Graph API**:
+1. Navigate to this app registration => **API permissions** => **Add a permission** => **Microsoft Graph API**:
 
    **Note**: Leave the pre-selected `User.Read` under **Microsoft Graph**.
 
-![API permissions](images/image_2.png)
+   ![API permissions](images/image_2.png)
 
-4. From **Certificates & secrets** => **Client secrets** => **+ New client secret**, copy client secret value
+1. From **Certificates & secrets** => **Client secrets** => **+ New client secret**, copy client secret value
 
    (**Note**: only copy the secret **Value**, NOT the Secret ID)
 
-![Client secret creation](images/image_3.png)
+   ![Client secret creation](images/image_3.png)
 
-5. Also copy the **Client ID** and **Tenant ID** from there:
+1. Also copy the **Client ID** and **Tenant ID** from there:
 
-![Client ID and Tenant ID](images/image_4.png)
+   ![Client ID and Tenant ID](images/image_4.png)
 
-6. Go to **AWS** > **Quick Suite** page, and click on **Integration**:
+1. Go to **AWS** > **Quick Suite** page, and click on **Integration**:
 
-![Quick Suite Integration](images/image_6.png)
+   ![Quick Suite Integration](images/image_6.png)
 
-7. Select **Microsoft SharePoint Online Integration** then **Next**
+1. Select **Microsoft SharePoint Online Integration** then **Next**
 
-![Configuration form](images/image_5.png)
+   ![Configuration form](images/image_5.png)
 
    **Connection Type**: Choose `Public network` or Your own VPC
 
@@ -52,20 +52,20 @@
 
    **Note**: `{your_tenant_id}` is copied from step 5).
 
-![MS Teams configuration](images/image_7.png)
+   ![MS Teams configuration](images/image_7.png)
 
-![Configuration form](images/image_8.png)
+   ![Configuration form](images/image_8.png)
 
-8. Click on **Create and continue**
+1. Click on **Create and continue**
 
-9. Navigate to **Integration** => **Actions** => **Microsoft SharePoint Online Integration** (or your MS Sharepoint integration name), and click on **Sign in**:
+1. Navigate to **Integration** => **Actions** => **Microsoft SharePoint Online Integration** (or your MS Sharepoint integration name), and click on **Sign in**:
 
-![Authorization consent](images/image_9.png)
+   ![Authorization consent](images/image_9.png)
 
-10. Check **Consent on behalf of your organization** and click **Accept**:
+1. Check **Consent on behalf of your organization** and click **Accept**:
 
-![Authorization consent](images/image_10.png)
+   ![Authorization consent](images/image_10.png)
 
-11. Enter your Microsoft Sharepoint email and password in the popup window
+1. Enter your Microsoft Sharepoint email and password in the popup window
 
-12. In Quick Suite, while creating chat agent, you can now link this action to the chat agent.
+1. In Quick Suite, while creating chat agent, you can now link this action to the chat agent.
