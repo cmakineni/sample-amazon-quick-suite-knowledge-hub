@@ -41,9 +41,7 @@ class RedshiftAgentCoreStack(Stack):
         sanitized = (
             re.sub("[^a-z0-9-]", "-", raw_prefix.lower()).strip("-")[:40] or "app"
         )
-        h = hashlib.sha1(raw_prefix.encode("utf-8"), usedforsecurity=False).hexdigest()[
-            :6
-        ]
+        h = hashlib.sha256(raw_prefix.encode("utf-8")).hexdigest()[:6]
         domain_prefix = f"{sanitized}-{h}"
 
         # IAM role for Redshift Lambda function
