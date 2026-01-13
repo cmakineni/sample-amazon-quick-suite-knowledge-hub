@@ -20,7 +20,7 @@ env = cdk.Environment(
 # Deploy the Redshift AgentCore stack
 RedshiftAgentCoreStack(
     app,
-    "RedshiftAgentCoreStack",
+    "quicksuite-redshift-mcp",
     env=env,
     description="Amazon Redshift MCP Integration with QuickSuite",
 )

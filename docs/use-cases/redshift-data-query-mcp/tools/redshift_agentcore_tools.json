@@ -1,117 +1,186 @@
 [
   {
-    "name": "list_clusters",
-    "description": "List all available Amazon Redshift clusters and serverless workgroups in your AWS account, including their current status, connection details, and configuration.",
+    "description": "Lists all available Amazon Redshift clusters and serverless workgroups.",
     "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "name": "list_databases",
-    "description": "List all databases in a specified Amazon Redshift cluster. Discovers all databases that the user has access to, including local databases and databases created from datashares.",
-    "inputSchema": {
-      "type": "object",
       "properties": {
-        "cluster_identifier": {
-          "type": "string",
-          "description": "The cluster identifier to query for databases. Must be a valid cluster identifier from the list_clusters tool."
-        },
-        "database_name": {
-          "type": "string",
-          "description": "The database to connect to for querying system views. Defaults to 'dev'."
+        "explanation": {
+          "type": "string"
         }
       },
-      "required": ["cluster_identifier"]
+      "required": [
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "list_clusters",
+    "outputSchema": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
     }
   },
   {
-    "name": "list_schemas",
-    "description": "List all schemas in a specified database within a Redshift cluster. Discovers all schemas including local, external, and shared schemas from datashares.",
+    "description": "Lists all databases within the specified Redshift cluster.",
     "inputSchema": {
-      "type": "object",
       "properties": {
         "cluster_identifier": {
-          "type": "string",
-          "description": "The cluster identifier to query for schemas. Must be a valid cluster identifier from the list_clusters tool."
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cluster_identifier",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "list_databases",
+    "outputSchema": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  {
+    "description": "Lists all schemas in a specified database.",
+    "inputSchema": {
+      "properties": {
+        "cluster_identifier": {
+          "type": "string"
         },
         "schema_database_name": {
-          "type": "string",
-          "description": "The database name to list schemas for. Must be a valid database name from the list_databases tool."
+          "type": "string"
         }
       },
-      "required": ["cluster_identifier", "schema_database_name"]
+      "required": [
+        "cluster_identifier",
+        "schema_database_name"
+      ],
+      "type": "object"
+    },
+    "name": "list_schemas",
+    "outputSchema": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
     }
   },
   {
-    "name": "list_tables",
-    "description": "List all tables in a specified schema within a Redshift database. Discovers all tables including base tables, views, external tables, and shared tables.",
+    "description": "Lists all tables in a specified schema.",
     "inputSchema": {
-      "type": "object",
       "properties": {
         "cluster_identifier": {
-          "type": "string",
-          "description": "The cluster identifier to query for tables. Must be a valid cluster identifier from the list_clusters tool."
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
         },
         "table_database_name": {
-          "type": "string",
-          "description": "The database name to list tables for. Must be a valid database name from the list_databases tool."
+          "type": "string"
         },
         "table_schema_name": {
-          "type": "string",
-          "description": "The schema name to list tables for. Must be a valid schema name from the list_schemas tool."
+          "type": "string"
         }
       },
-      "required": ["cluster_identifier", "table_database_name", "table_schema_name"]
+      "required": [
+        "cluster_identifier",
+        "table_database_name",
+        "table_schema_name",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "list_tables",
+    "outputSchema": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
     }
   },
   {
-    "name": "list_columns",
-    "description": "List all columns in a specified table within a Redshift schema. Provides detailed information about data types, constraints, and column properties.",
+    "description": "Lists all columns in a specified table.",
     "inputSchema": {
-      "type": "object",
       "properties": {
         "cluster_identifier": {
-          "type": "string",
-          "description": "The cluster identifier to query for columns. Must be a valid cluster identifier from the list_clusters tool."
+          "type": "string"
         },
         "column_database_name": {
-          "type": "string",
-          "description": "The database name to list columns for. Must be a valid database name from the list_databases tool."
+          "type": "string"
         },
         "column_schema_name": {
-          "type": "string",
-          "description": "The schema name to list columns for. Must be a valid schema name from the list_schemas tool."
+          "type": "string"
         },
         "column_table_name": {
-          "type": "string",
-          "description": "The table name to list columns for. Must be a valid table name from the list_tables tool."
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
         }
       },
-      "required": ["cluster_identifier", "column_database_name", "column_schema_name", "column_table_name"]
+      "required": [
+        "cluster_identifier",
+        "column_database_name",
+        "column_schema_name",
+        "column_table_name",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "list_columns",
+    "outputSchema": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
     }
   },
   {
-    "name": "execute_query",
-    "description": "Execute a SQL query against a Redshift cluster or serverless workgroup using the Redshift Data API. Supports various data types and returns structured results.",
+    "description": "Executes a SQL query against a Redshift cluster with safety protections.",
     "inputSchema": {
-      "type": "object",
       "properties": {
         "cluster_identifier": {
-          "type": "string",
-          "description": "The cluster identifier to execute the query on. Must be a valid cluster identifier from the list_clusters tool."
+          "type": "string"
         },
         "database_name": {
-          "type": "string",
-          "description": "The database name to execute the query against. Must be a valid database name from the list_databases tool."
+          "type": "string"
         },
         "sql": {
-          "type": "string",
-          "description": "The SQL statement to execute. Should be a single SQL statement."
+          "type": "string"
         }
       },
-      "required": ["cluster_identifier", "database_name", "sql"]
+      "required": [
+        "cluster_identifier",
+        "database_name",
+        "sql"
+      ],
+      "type": "object"
+    },
+    "name": "execute_query",
+    "outputSchema": {
+      "properties": {
+        "columns": {
+          "type": "array"
+        },
+        "execution_time_ms": {
+          "type": "number"
+        },
+        "query_id": {
+          "type": "string"
+        },
+        "row_count": {
+          "type": "number"
+        },
+        "rows": {
+          "type": "array"
+        }
+      },
+      "type": "object"
     }
   }
 ]

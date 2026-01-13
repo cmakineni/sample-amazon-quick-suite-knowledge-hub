@@ -6,6 +6,9 @@ cdk-outputs.json
 *.js.map
 node_modules/
 
+# Layer build directories
+cdk/layers/*_build/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -37,6 +40,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# uv
+.uv/
+uv.lock
 
 # IDE
 .vscode/

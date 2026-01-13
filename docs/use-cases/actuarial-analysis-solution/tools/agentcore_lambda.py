@@ -11,7 +11,6 @@ Key Features:
 - Provides unified API interface for all actuarial tools
 
 Supported Tools:
-- extract_data: SQL query execution and data storage
 - detect_litigation: Litigation indicator analysis
 - score_fraud_risk: Fraud probability scoring
 - analyze_risk_factors: Risk segmentation and analysis

@@ -1,8 +1,5 @@
 site/
 
-# Kiro CLI settings (local development only)
-.kiro/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -94,5 +91,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-debug.py

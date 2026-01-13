@@ -1,21 +1,21 @@
 ---
 category: Capability
-description: "Amazon Redshift MCP integration for database operations with QuickSuite"
+description: "Amazon Redshift MCP integration for database operations with Amazon Quick Suite"
 ---
 
-# Redshift Data Query MCP - Amazon Redshift Database Operations
+# Redshift Data Query MCP - Amazon Redshift Database Integration
 
-**Amazon Redshift MCP integration** with Amazon QuickSuite. This solution uses the **AWS LAB Redshift MCP Server** with Lambda wrapper that enables read-only access to Amazon Redshift clusters through QuickSuite using MCP Actions.
+**Amazon Redshift Data Query MCP integration** with Amazon QuickSuite. This solution creates an MCP integration that enables read-only access to Amazon Redshift clusters through QuickSuite using MCP Actions with AWS LAB Redshift MCP Server.
 
 ## 🏗️ Architecture
 
-![Redshift Data Query MCP Architecture](./images/redshift-mcp-architecture.png)
+![Amazon Redshift Data Query MCP Architecture](./images/redshift-mcp-architecture.png)
 
 **Components:**
 
 - **AgentCore Gateway**: Amazon Bedrock AgentCore Gateway with Lambda target
 - **Lambda Wrapper**: Wraps AWS LAB Redshift MCP Server for AgentCore compatibility
-- **AWS LAB Redshift MCP Server**: Official AWS LAB MCP server implementation for Redshift operations
+- **AWS LAB Redshift MCP Server**: Official AWS LAB MCP server implementation
 - **QuickSuite Integration**: MCP Actions for conversational AI
 - **Amazon Redshift**: Cluster discovery and SQL query execution
 
@@ -23,10 +23,10 @@ description: "Amazon Redshift MCP integration for database operations with Quick
 
 This MCP integration enables:
 
-- **AWS LAB Redshift MCP Server**: Uses official AWS LAB MCP server implementation
-- **Lambda Wrapper**: AgentCore Gateway compatibility layer
-- **Read-Only Access**: Secure Redshift cluster and database operations
+- **Direct Redshift Access**: Query Amazon Redshift clusters through natural language
 - **QuickSuite Integration**: Integration using MCP Actions
+- **AgentCore Gateway**: Gateway with Lambda target and authentication
+- **Read-Only Operations**: Secure database discovery and query execution
 
 ## 📁 Project Structure
 
@@ -34,9 +34,11 @@ This MCP integration enables:
 redshift-data-query-mcp/
 ├── app.py                              # CDK deployment entry point
 ├── cdk.json                            # CDK configuration
-├── requirements.txt                    # CDK dependencies
+├── pyproject.toml                      # Project dependencies
+├── uv.lock                             # Dependency lock file
 ├── tools/                              # Lambda function code
-│   ├── redshift_agentcore_lambda.py   # Lambda wrapper for AWS LAB Redshift MCP Server
+│   ├── redshift_agentcore_lambda.py   # AgentCore MCP handler
+│   ├── redshift_agentcore_tools.json  # MCP tool definitions
 │   └── requirements.txt               # Lambda dependencies
 ├── cdk/                               # Infrastructure code
 │   ├── redshift_agentcore_stack.py   # AgentCore Gateway stack
@@ -45,6 +47,13 @@ redshift-data-query-mcp/
 ```
 
 ## 🚀 Quick Start
+
+### Prerequisites
+
+- **AWS CLI** configured with appropriate permissions
+- **Node.js** (for AWS CDK)
+- **Python 3.12+** with uv package manager
+- **Docker** (required for Lambda dependency bundling)
 
 ### 1. Clone Repository (Sparse Checkout)
 
@@ -62,10 +71,8 @@ cd docs/use-cases/redshift-data-query-mcp
 
 ```bash
 npm install -g aws-cdk
-pip install -r requirements.txt
+uv sync
 cdk deploy --require-approval never
-```
-
 ```
 
 ### 3. Get Outputs
@@ -82,51 +89,78 @@ cdk deploy --require-approval never
 aws cloudformation describe-stacks --stack-name RedshiftAgentCoreStack --query 'Stacks[0].Outputs'
 ```
 
-Key outputs for QuickSuite integration:
+Key outputs for QuickSuite Actions:
 
 - `GatewayUrl` - AgentCore Gateway endpoint
 - `ClientId` - OAuth2 client ID
 - `ClientSecret` - OAuth2 client secret
-- `CognitoTokenUrl` - OAuth2 token endpoint
-
 ## 🔧 Available Tools
 
-### Redshift Data Tools (redshift_agentcore_lambda.py)
+### Redshift Tools (redshift_agentcore_lambda.py)
 
 | Tool | Purpose | Input | Output |
 |------|---------|-------|--------|
-| `list_clusters` | Discover available Redshift clusters and serverless workgroups | None | clusters, connection_details |
-| `list_databases` | List databases in a Redshift cluster | cluster_identifier | databases, metadata |
-| `list_schemas` | List schemas in a database | cluster_identifier, database_name | schemas, types |
-| `list_tables` | List tables in a schema | cluster_identifier, database_name, schema_name | tables, types |
-| `list_columns` | List columns in a table | cluster_identifier, database_name, schema_name, table_name | columns, data_types |
+| `list_clusters` | Discover available Redshift clusters and serverless workgroups | None | cluster_mapping, configurations |
+| `list_databases` | List databases in a Redshift cluster | cluster_identifier | database_list, metadata |
+| `list_schemas` | List schemas in a database | cluster_identifier, database_name | schema_list, metadata |
+| `list_tables` | List tables in a schema | cluster_identifier, database_name, schema_name | table_list, metadata |
+| `list_columns` | List columns in a table | cluster_identifier, database_name, schema_name, table_name | column_list, data_types |
 | `execute_query` | Execute SQL queries (read-only) | cluster_identifier, database_name, sql | query_results, rows |
 
-### 4. Configure QuickSuite Integration
+### list_clusters
 
-1. **Amazon QuickSuite** → **Integrations** → **Actions** → **Model Context Protocol**
-2. **AgentCore Gateway Endpoint**: Use `GatewayUrl`
-3. **Authentication**: Service-to-service OAuth with Cognito credentials
-4. **Complete Setup** and test MCP integration
+**Purpose**: Discover available Redshift clusters and serverless workgroups
+**Input**: None
+**Output**: Cluster mapping with identifiers, types, status, endpoints
 
-## 🔧 MCP Tools
+### list_databases
 
-The AWS LAB Redshift MCP Server provides these Redshift operations:
+**Purpose**: List databases in a Redshift cluster
+**Input**: `cluster_identifier` (required): Target cluster identifier
+**Output**: Database list with names, owners, types
 
-### Available Tools
+### list_schemas
 
-- **list_clusters**: Discover available Amazon Redshift clusters and serverless workgroups
-- **list_databases**: List databases in a Redshift cluster
-- **list_schemas**: List schemas in a database
-- **list_tables**: List tables in a schema
-- **list_columns**: List columns in a table
-- **execute_query**: Execute read-only SQL queries via Redshift Data API
+**Purpose**: List schemas in a database
+**Input**:
+- `cluster_identifier` (required): Target cluster identifier
+- `schema_database_name` (required): Database name
 
-**Note**: All tools are provided by the [AWS LAB Redshift MCP Server](https://awslabs.github.io/mcp/servers/redshift-mcp-server) implementation with built-in read-only security controls.
+**Output**: Schema list with names, owners, types
 
+### list_tables
+
+**Purpose**: List tables in a schema
+**Input**:
+- `cluster_identifier` (required): Target cluster identifier
+- `table_database_name` (required): Database name
+- `table_schema_name` (required): Schema name
+
+**Output**: Table list with names, types, remarks
+
+### list_columns
+
+**Purpose**: List columns in a table
+**Input**:
+- `cluster_identifier` (required): Target cluster identifier
+- `column_database_name` (required): Database name
+- `column_schema_name` (required): Schema name
+- `column_table_name` (required): Table name
+
+**Output**: Column list with names, data types, constraints
+
+### execute_query
+
+**Purpose**: Execute SQL queries (read-only)
+**Input**:
+- `cluster_identifier` (required): Target cluster identifier
+- `database_name` (required): Database name
+- `sql` (required): SQL query string
+
+**Output**: Query results with columns and rows
 ## QuickSuite Integration
 
-Complete guide to integrate Redshift AgentCore Gateway with Amazon QuickSuite using MCP Actions.
+Complete guide to integrate Amazon Redshift with Amazon QuickSuite using MCP Actions.
 
 ### Prerequisites
 
@@ -148,8 +182,8 @@ From your CDK deployment, you'll need:
 **Step 2: Configure MCP Server**
 Fill in the MCP configuration:
 
-- **Name**: Redshift Database Operations
-- **Description**: Amazon Redshift cluster discovery and SQL query execution
+- **Name**: Amazon Redshift Data Query
+- **Description**: Amazon Redshift database operations with read-only access
 - **MCP Server Endpoint**: Paste your `GatewayUrl` from CDK deployment outputs
 - Click **Next**
 
@@ -173,10 +207,9 @@ Fill in the MCP configuration:
 
 ```
 "List all available Redshift clusters"
-"Show me databases in cluster my-redshift-cluster"
-"List tables in the public schema"
-"Execute SELECT * FROM sales_data LIMIT 10"
-"Run SELECT COUNT(*) FROM customer_orders WHERE status = 'completed'"
+"Show me databases in cluster my-cluster"
+"What tables are in the public schema of database dev?"
+"Execute query: SELECT COUNT(*) FROM sales WHERE date > '2024-01-01'"
 ```
 
 ## Troubleshooting
@@ -189,8 +222,8 @@ Fill in the MCP configuration:
 
 **Redshift Access:**
 
-- Verify Amazon Redshift clusters exist and are accessible
-- Check IAM permissions for Redshift services
+- Verify Amazon Redshift cluster exists and is accessible
+- Check IAM permissions for Redshift Data API
 - Confirm cluster status is available
 
 **AgentCore Gateway:**
@@ -202,8 +235,93 @@ Fill in the MCP configuration:
 ## 📚 Documentation
 
 - [CDK Deployment Guide](cdk/README.md) - Infrastructure details
-- [AWS LAB Redshift MCP Server](https://awslabs.github.io/mcp/servers/redshift-mcp-server) - Official MCP server documentation
+- [MCP Tool Definitions](tools/redshift_agentcore_tools.json) - API specifications
+- [AWS LAB Redshift MCP Server](https://awslabs.github.io/mcp/servers/redshift-mcp-server) - Official implementation
 
 ## License
 
 This library is licensed under the MIT-0 License.
+- `CognitoTokenUrl` - OAuth2 token endpoint
+
+### Configure MCP Action in Amazon Quick Suite
+
+**Step 1: Access Integrations**
+
+1. Navigate to **Integrations** in Amazon Quick Suite
+2. Select **Actions**
+3. Select the **+** button for **Model Context Protocol**
+
+**Step 2: Configure MCP Server**
+Complete the MCP configuration:
+
+- **Name**: Amazon Redshift Database Operations
+- **Description**: Amazon Redshift cluster discovery and SQL query execution
+- **MCP Server Endpoint**: Enter your `GatewayUrl` from AWS CDK deployment outputs
+- Select **Next**
+
+**Step 3: Configure Authentication**
+
+1. For Authentication, select **Service Authentication**
+2. Keep **Service-to-service OAuth** within the Authentication type field
+3. Enter the authentication values from your AWS CDK deployment outputs:
+
+   - **Client ID** → Enter your `ClientId` (ensure no leading/trailing spaces)
+   - **Client Secret** → Enter your `ClientSecret` (ensure no leading/trailing spaces)
+   - **Token URL** → Enter your `CognitoTokenUrl`
+
+**Step 4: Complete Setup**
+
+1. Select **Create and Continue**
+2. Select **Next**
+3. Select **Next**
+
+### Usage in Amazon Quick Suite
+
+Example queries:
+```
+"List all available Redshift clusters"
+"Show me databases in cluster my-redshift-cluster"
+"List tables in the public schema"
+"Execute SELECT * FROM sales_data LIMIT 10"
+"Run SELECT COUNT(*) FROM customer_orders WHERE status = 'completed'"
+```
+
+## Troubleshooting
+
+**MCP Authentication Issues:**
+
+- Verify OAuth2 credentials in Amazon Quick Suite MCP Actions
+- Check Amazon Cognito token endpoint configuration
+- Ensure client secret is correctly copied without extra spaces
+
+**Amazon Redshift Access:**
+
+- Verify Amazon Redshift clusters exist and are accessible
+- Check AWS Identity and Access Management (IAM) permissions for Amazon Redshift services
+- Confirm cluster status is available
+
+**Amazon Bedrock Agent Runtime:**
+
+- Monitor Amazon Bedrock Agent Runtime throttling limits
+- Check AWS Lambda timeout and memory settings
+- Review Cross-Origin Resource Sharing (CORS) configuration for Amazon Quick Suite
+
+**Deployment Issues:**
+
+- Ensure AWS credentials are configured: `aws configure`
+- Check AWS CDK bootstrap: `cdk bootstrap`
+- Verify Python 3.9+ and Node.js are installed
+- For uv issues, use pip as fallback: `pip install -e .`
+
+## Documentation
+
+- [AWS CDK Deployment Guide](cdk/README.md) - Infrastructure deployment details
+- [AWS LAB Redshift MCP Server](https://awslabs.github.io/mcp/servers/redshift-mcp-server) - Official MCP server documentation
+
+## Security
+
+See [CONTRIBUTING](../../HOW-TO-CONTRIBUTE.md) for more information.
+
+## License
+
+This library is licensed under the MIT-0 License. See the LICENSE file.

@@ -33,13 +33,13 @@ This MCP integration enables:
 bedrock-kb-retrieval-mcp/
 ├── app.py                          # CDK deployment entry point
 ├── cdk.json                        # CDK configuration
-├── requirements.txt                # CDK dependencies
+├── pyproject.toml                  # Project dependencies
 ├── tools/                          # Lambda function code
 │   ├── kb_agentcore_lambda.py     # AgentCore MCP handler
 │   ├── kb_agentcore_tools.json    # MCP tool definitions
 │   └── requirements.txt           # Lambda dependencies
 ├── cdk/                           # Infrastructure code
-│   ├── kb_direct_stack.py         # AgentCore Gateway stack
+│   ├── bedrock_kb_mcp_stack.py    # AgentCore Gateway stack
 │   └── README.md                  # CDK deployment guide
 └── README.md                      # This file
 ```
@@ -62,10 +62,8 @@ cd docs/use-cases/bedrock-kb-retrieval-mcp
 
 ```bash
 npm install -g aws-cdk
-pip install -r requirements.txt
+uv sync
 cdk deploy --require-approval never
-```
-
 ```
 
 ### 3. Get Outputs
@@ -73,13 +71,13 @@ cdk deploy --require-approval never
 **Option 1: AWS Console (Recommended)**
 
 1. Go to **AWS CloudFormation** in the AWS Console
-2. Find the **BedrockKBStack** stack
+2. Find the **quicksuite-bedrock-kb-mcp** stack
 3. Click on the **Outputs** tab
 4. Copy the required values for Quick Suite integration
 
 **Option 2: CLI Commands**
 ```bash
-aws cloudformation describe-stacks --stack-name BedrockKBStack --query 'Stacks[0].Outputs'
+aws cloudformation describe-stacks --stack-name quicksuite-bedrock-kb-mcp --query 'Stacks[0].Outputs'
 ```
 
 Key outputs for QuickSuite Actions:
@@ -95,15 +93,13 @@ Key outputs for QuickSuite Actions:
 
 | Tool | Purpose | Input | Output |
 |------|---------|-------|--------|
-| `ListKnowledgeBases` | Discover available Bedrock Knowledge Bases | None | knowledge_base_mapping, data_sources |
+| `ListKnowledgeBases` | Discover available Bedrock Knowledge Bases | explanation | knowledge_base_mapping, data_sources |
 | `QueryKnowledgeBases` | Natural language retrieval from Knowledge Bases | query, knowledge_base_id, options | documents, content, scores |
-
-## QuickSuite Integration
 
 ### ListKnowledgeBases
 
 **Purpose**: Discover available Bedrock Knowledge Bases and data sources
-**Input**: None
+**Input**: `explanation` (string): Brief description of why you're listing knowledge bases
 **Output**: Knowledge base mapping with IDs, names, descriptions, data sources
 
 ### QueryKnowledgeBases
@@ -115,13 +111,14 @@ Key outputs for QuickSuite Actions:
 - `knowledge_base_id` (required): Target KB ID
 - `number_of_results` (optional): Result count (default: 10, max: 100)
 - `reranking` (optional): Enable reranking (default: false)
+- `reranking_model_name` (optional): Reranking model ("COHERE" or "AMAZON")
 - `data_source_ids` (optional): Filter by data sources
 
 **Output**: Newline-separated JSON documents with content, location, score
 
 ## QuickSuite Integration
 
-Complete guide to integrate KB Direct with Amazon QuickSuite using MCP Actions.
+Complete guide to integrate Bedrock KB Retrieval with Amazon QuickSuite using MCP Actions.
 
 ### Prerequisites
 

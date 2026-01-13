@@ -1,5 +1,3 @@
-boto3>=1.34.0
-botocore>=1.34.0
-mcp-lambda>=0.1.0
-mcp>=1.0.0
-awslabs-redshift-mcp-server>=0.1.0
+run-mcp-servers-with-aws-lambda
+mcp
+awslabs-redshift-mcp-server

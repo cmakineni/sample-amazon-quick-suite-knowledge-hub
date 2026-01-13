@@ -1,0 +1,2 @@
+# Layer build directories
+cdk/layers/*_build/

@@ -2,7 +2,7 @@
 Amazon Redshift MCP Server Lambda Handler
 
 This Lambda function provides Amazon Redshift cluster management capabilities
-through the Model Context Protocol (MCP) for Bedrock AgentCore Gateway integration.
+through the MCP for Bedrock AgentCore Gateway integration.
 
 Features:
 - Redshift cluster discovery and management
@@ -11,6 +11,7 @@ Features:
 - Bedrock AgentCore Gateway compatibility
 """
 
+import logging
 import os
 import sys
 import tempfile
@@ -21,6 +22,10 @@ from mcp_lambda import (
     BedrockAgentCoreGatewayTargetHandler,
     StdioServerAdapterRequestHandler,
 )
+
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
@@ -58,7 +63,7 @@ def handler(event, context):
             },
         )
 
-        # Extract tool name from event if not in context (following actuarial pattern)
+        # Extract tool name from event if not in context
         if not (
             context.client_context
             and hasattr(context.client_context, "custom")
@@ -92,5 +97,5 @@ def handler(event, context):
         return result
 
     except Exception as e:
-        print(f"Error in redshift-mcp Lambda handler: {str(e)}")
+        logger.error(f"Error in redshift-mcp Lambda handler: {str(e)}")
         raise

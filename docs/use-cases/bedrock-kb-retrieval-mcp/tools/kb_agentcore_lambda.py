@@ -1,15 +1,20 @@
 import json
+import logging
 import os
 from typing import Any
 
 import boto3
+
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
     """KB Direct AgentCore Lambda handler for Knowledge Base operations."""
 
     try:
-        # Extract tool name from event if not in context (following actuarial pattern)
+        # Extract tool name from event if not in context
         if not (
             context.client_context
             and hasattr(context.client_context, "custom")
@@ -60,7 +65,7 @@ def handler(event, context):
             }
 
     except Exception as e:
-        print(f"Error in KB Direct handler: {str(e)}")
+        logger.error(f"Error in KB Direct handler: {str(e)}")
         return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
 
 
@@ -90,7 +95,10 @@ def list_knowledge_bases(bedrock_agent) -> dict[str, Any]:
                                 {"id": ds.get("dataSourceId"), "name": ds.get("name")}
                             )
                 except Exception as ds_error:
-                    print(f"Error getting data sources for KB {kb_id}: {str(ds_error)}")
+                    logger.warning(
+                        f"Could not retrieve data sources for KB {kb_id}: {str(ds_error)}"
+                    )
+                    # Skip data sources that can't be retrieved
 
                 result[kb_id] = {
                     "name": kb_name,
@@ -120,7 +128,7 @@ def query_knowledge_bases(
             or parameters.get("knowledgeBaseId")
             or parameters.get("kb_id")
         )
-        number_of_results = parameters.get("number_of_results", 10)
+        number_of_results = parameters.get("number_of_results", 100)
         reranking = parameters.get("reranking", False)
         reranking_model_name = parameters.get("reranking_model_name", "AMAZON")
         data_source_ids = parameters.get("data_source_ids")
@@ -135,13 +143,11 @@ def query_knowledge_bases(
 
         # Build retrieval configuration
         retrieval_config = {
-            "vectorSearchConfiguration": {
-                "numberOfResults": min(number_of_results, 100)  # Cap at 100
-            }
+            "vectorSearchConfiguration": {"numberOfResults": number_of_results}
         }
 
         # Add data source filter if specified
-        if data_source_ids and isinstance(data_source_ids, list):
+        if data_source_ids:
             retrieval_config["vectorSearchConfiguration"]["filter"] = {
                 "in": {
                     "key": "x-amz-bedrock-kb-data-source-id",
@@ -193,16 +199,16 @@ def query_knowledge_bases(
 
             documents.append(
                 {
-                    "content": result.get("content", {}).get("text", ""),
-                    "location": source_url,
-                    "score": result.get("score", 0.0),
+                    "content": result["content"],
+                    "source_url": source_url,
+                    "score": result.get("score", ""),
                 }
             )
 
         # Return as newline-separated JSON objects
         result_lines = [json.dumps(doc) for doc in documents]
 
-        return {"statusCode": 200, "body": "\n".join(result_lines)}
+        return {"statusCode": 200, "body": "\n\n".join(result_lines)}
 
     except Exception as e:
         return {

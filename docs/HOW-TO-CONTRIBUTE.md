@@ -90,7 +90,7 @@ To send us a pull request, please:
 
 GitHub provides additional documentation on [forking a repository](https://help.github.com/articles/fork-a-repo/) and [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
-## Contributing Guidelines
+## 📋 Contributing Guidelines
 
 ### Before You Start
 
@@ -121,12 +121,12 @@ When contributing content, please ensure:
 - Include a **README.md** file for each integration or use case
 - Add **frontmatter** with metadata when applicable:
 
-```yaml
----
-category: Capability
-description: "Brief description of your project for metadata"
----
-```
+  ```yaml
+  ---
+  category: Capability
+  description: "Brief description of your project for metadata"
+  ---
+  ```
 
 ## Issue Guidelines
 
@@ -147,13 +147,13 @@ For security vulnerabilities, please **DO NOT** open a public issue. Instead:
 - Allow time for us to address the issue before public disclosure
 - See our [Security Policy](https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub/security/policy) for more details
 
-## Questions and Support
+## ❓ Questions and Support
 
 - **Documentation questions**: Use [GitHub Discussions](https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub/discussions)
 - **Technical support**: Contact AWS Support for Quick Suite issues
 - **Community support**: Join the [Amazon Quick Suite Community](https://community.amazonquicksight.com/)
 
-## Development Setup
+## 🛠️ Development Setup
 
 ### About Package Management
 
@@ -166,9 +166,7 @@ The repository includes:
 
 ### Prerequisites
 
-- **Python 3.8 or higher** (for documentation site)
-- **Node.js 20 or higher** (for React/Next.js projects)
-- **npm or yarn** (for Node.js package management)
+- Python 3.8 or higher
 
 ### Local Development
 
@@ -177,98 +175,13 @@ The repository includes:
 git clone https://github.com/YOUR-USERNAME/sample-amazon-quick-suite-knowledge-hub.git
 cd sample-amazon-quick-suite-knowledge-hub
 
-# Install Python dependencies for documentation
+# Install uv and sync dependencies
 pip install uv
 uv sync --dev
 
 # Install pre-commit hooks (one-time)
 uv run pre-commit install
-
-# For Node.js projects, navigate to specific project directories
-cd docs/use-cases/your-nodejs-project
-npm install
 ```
-
-#### Node.js Project Standards
-
-When contributing Node.js/React/Next.js projects:
-
-**Package.json Requirements:**
-
-```json
-{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  }
-}
-```
-
-**ESLint Configuration:**
-
-- Use `eslint-config-next` for Next.js projects
-- Include security-focused rules
-- Configure for TypeScript if applicable
-
-**TypeScript Configuration:**
-
-- Use strict mode: `"strict": true`
-- Include proper path mapping
-- Configure for React/Next.js as needed
-
-**Security Best Practices:**
-
-- Keep dependencies updated
-- Use `npm audit` to check for vulnerabilities
-- Avoid hardcoded secrets or API keys
-- Use environment variables for configuration
-
-#### Python Project Standards
-
-When contributing Python projects (CDK, Lambda functions, documentation):
-
-**Project Structure:**
-
-```text
-project/
-├── pyproject.toml          # Project metadata and dependencies
-├── uv.lock                 # Locked dependency versions
-├── requirements.txt        # For Lambda layers (if needed)
-└── .gitignore             # Python-specific ignores
-```
-
-**pyproject.toml Requirements:**
-
-```toml
-[project]
-name = "your-project"
-version = "0.1.0"
-description = "Brief description"
-requires-python = ">=3.8"
-dependencies = [
-    "boto3>=1.26.0",
-    "aws-cdk-lib>=2.0.0"
-]
-
-[project.optional-dependencies]
-dev = ["pytest", "black", "ruff"]
-```
-
-**Code Quality Standards:**
-
-- Use `ruff` for linting and formatting
-- Follow PEP 8 style guidelines
-- Use type hints where applicable
-- Include docstrings for functions and classes
-
-**Security Best Practices:**
-
-- Keep dependencies updated with `uv sync --upgrade`
-- Use `bandit` for security scanning
-- Avoid hardcoded credentials
-- Use AWS IAM roles and environment variables
 
 That's it! You're ready to develop.
 
@@ -302,20 +215,13 @@ git push origin my-branch
 
 **On every commit** (~30-60 seconds):
 
-- ✅ **Python code formatting** (auto-fixes with ruff)
+- ✅ **Code formatting** (auto-fixes with ruff)
 - ✅ **Import sorting** (auto-fixes)
-- ✅ **Python linting** (with ruff)
+- ✅ **Linting** (with ruff)
 - ✅ **File hygiene** (trailing whitespace, etc.)
 - ✅ **Markdown formatting** (auto-fixes)
-- ✅ **Security scanning** (bandit for Python, npm audit for Node.js)
+- ✅ **Security scanning** (bandit)
 - ✅ **Documentation build** (mkdocs build --strict)
-
-**For Node.js projects** (additional checks):
-
-- ✅ **TypeScript/JavaScript linting** (ESLint)
-- ✅ **Type checking** (TypeScript compiler)
-- ✅ **Build verification** (Next.js/React builds)
-- ✅ **Dependency security** (npm audit)
 
 ### Skipping Hooks (WIP Commits)
 
@@ -329,13 +235,11 @@ git commit --no-verify -m "wip: incomplete work"
 
 ### Running Checks Manually
 
-**Python project checks:**
-
 ```bash
 # Run all pre-commit checks
 uv run pre-commit run --all-files
 
-# Run individual Python tools
+# Run individual tools
 uv run ruff format .
 uv run ruff check --fix .
 uv run bandit -r .
@@ -344,34 +248,11 @@ uv run bandit -r .
 uv run mkdocs build --strict
 uv run mkdocs serve
 
-# Add new Python dependencies
+# Add new dependencies
 uv add requests
+
+# Add development dependencies
 uv add --dev pytest
-```
-
-**Node.js project checks:**
-
-```bash
-# Navigate to your Node.js project directory
-cd docs/use-cases/your-nodejs-project
-
-# Install dependencies
-npm install
-
-# Run linting
-npm run lint
-
-# Run build
-npm run build
-
-# Run development server
-npm run dev
-
-# Run security audit
-npm audit
-
-# Type checking (for TypeScript projects)
-npx tsc --noEmit
 ```
 
 ### Building for Production
@@ -395,7 +276,7 @@ The built site will be in the `site/` directory.
 
 Place your project in the appropriate directory:
 
-```text
+```
 docs/
 ├── integration/           # For integration guides
 │   ├── knowledge-base/   # Knowledge base integrations
@@ -448,13 +329,6 @@ Each project must include:
 - **LICENSE** - License file
 - **.gitignore** - Appropriate gitignore file
 
-**For Node.js/React projects, also include:**
-
-- **package.json** - Node.js dependencies and scripts
-- **tsconfig.json** - TypeScript configuration (for TypeScript projects)
-- **.eslintrc.js/.eslintrc.json** - ESLint configuration
-- **next.config.js/ts** - Next.js configuration (for Next.js projects)
-
 ### README.md Template
 
 Use this structure for your README.md:
@@ -485,7 +359,7 @@ cd infrastructure
 ./deploy.sh
 ```
 
-### 2. Configure Frontend (for Node.js/React projects)
+### 2. Configure Frontend
 
 ```bash
 cd frontend
@@ -497,22 +371,20 @@ npm run dev
 
 Explain any configuration options.
 
-## Code of Conduct
+## 🤝 Code of Conduct
 
 This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct). For more information see the Code of Conduct FAQ or contact <opensource-codeofconduct@amazon.com> with any additional questions or comments.
 
-## Licensing
+## 📄 Licensing
 
 See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
 
 By contributing to this project, you agree that your contributions will be licensed under the Apache 2.0 License.
 
-## Recognition
+## 🏆 Recognition
 
 Contributors who provide valuable content will be recognized in our project's Contributors section. We appreciate all forms of contribution, from small typo fixes to comprehensive integration guides!
 
 ## 🙏 Thank You
 
 Your contributions help make Amazon Quick Suite more accessible and easier to use for everyone. Whether you're fixing a typo, adding a new integration guide, or sharing a complete use case, every contribution matters and is greatly appreciated!
-
-Learn more about [Amazon Quick Suite](https://aws.amazon.com/quicksuite/) | [Documentation](https://docs.aws.amazon.com/quicksuite/) | [Community](https://community.amazonquicksight.com/)

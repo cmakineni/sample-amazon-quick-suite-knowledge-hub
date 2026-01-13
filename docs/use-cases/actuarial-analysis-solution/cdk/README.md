@@ -2,16 +2,16 @@
 
 ## 📦 What This Deploys
 
-1. **S3 Buckets** - Claims data storage and Athena results
+1. **S3 Buckets** - Claims data storage and Athena results (stack-prefixed naming)
 2. **Athena Integration** - SQL queries with Glue catalog
-   - Glue Database: `claims_db_{suffix}`
+   - Glue Database: `{stack-name}-claims-db-{unique_id}`
    - Glue Crawler: Auto-discovers schema
-   - Athena Workgroup: `actuarial-workgroup`
-3. **Lambda Functions**
+   - Athena Workgroup: `{stack-name}-actuarial-workgroup-{unique_id}`
+3. **Lambda Functions** (PythonFunction construct)
    - Actuarial analysis tools (7 specialized tools)
    - Data query tools (SQL interface)
-4. **AgentCore Memory** - Session-based data persistence
-5. **AgentCore Gateway** - Natural language interface with OAuth2 authentication
+4. **AgentCore Memory** - Session-based data persistence (7-day retention)
+5. **AgentCore Gateway** - Native MCP protocol with OAuth2 authentication
 6. **IAM Roles** - Least-privilege permissions for all services
 
 ## 🏗️ Architecture Components
@@ -20,14 +20,24 @@
 
 - **Purpose**: Stores intermediate results between tool calls
 - **Benefits**: Eliminates redundant calculations, enables complex workflows
-- **Storage**: Bedrock AgentCore memory service
+- **Storage**: BedrockAgentCore memory service with 7-day event expiry
+- **Naming**: `ActuarialAgentMemory_{unique_id}` (follows AWS naming pattern)
 
 ### AgentCore Gateway
 
 - **Authentication**: Cognito OAuth2 with client credentials
-- **Protocol**: MCP (Model Context Protocol)
-- **Tools Integration**: Both actuarial and data query tools
+- **Protocol**: MCP
+- **Tools Integration**: Both actuarial and data query tools via GatewayTargets
 - **URL Format**: `https://{gateway-id}.gateway.bedrock-agentcore.{region}.amazonaws.com/mcp`
+
+### Resource Naming
+
+All resources use consistent naming: `{stack-name}-resource-type-{unique_id}`
+
+Examples:
+- S3 Buckets: `quicksuite-actuarial-mcp-claims-a1b2c3d4`
+- Lambda Functions: `quicksuite-actuarial-mcp-actuarial-tools-a1b2c3d4`
+- Database: `quicksuite-actuarial-mcp-claims-db-a1b2c3d4`
 
 ## 🚀 Deployment
 
@@ -38,7 +48,7 @@
 npm install -g aws-cdk
 
 # Install Python dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
 ### Deploy Everything

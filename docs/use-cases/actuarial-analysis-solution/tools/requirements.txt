@@ -1,2 +1,0 @@
-# Dependencies provided by Lambda layers
-bedrock-agentcore-starter-toolkit

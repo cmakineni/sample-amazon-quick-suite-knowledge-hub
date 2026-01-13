@@ -1,30 +1,64 @@
+"""
+Actuarial Analysis Solution MCP Integration Stack
+
+CDK stack that deploys Actuarial Analysis tools with Amazon Quick Suite
+using MCP (Model Context Protocol) through native BedrockAgentCore Gateway constructs.
+"""
+
+import hashlib
+import json
 import os
+import re
 import shutil
-import subprocess
 import uuid
 
-from aws_cdk import CfnOutput, CustomResource, Duration, RemovalPolicy, Stack
-from aws_cdk import aws_glue as glue
-from aws_cdk import aws_iam as iam
-from aws_cdk import aws_lambda as lambda_
-from aws_cdk import aws_s3 as s3
-from aws_cdk import aws_s3_deployment as s3deploy
+from aws_cdk import (
+    CfnOutput,
+    Duration,
+    RemovalPolicy,
+    Stack,
+)
+from aws_cdk import (
+    aws_athena as athena,
+)
+from aws_cdk import (
+    aws_bedrockagentcore as bedrockagentcore,
+)
+from aws_cdk import (
+    aws_cognito as cognito,
+)
+from aws_cdk import (
+    aws_glue as glue,
+)
+from aws_cdk import (
+    aws_iam as iam,
+)
+from aws_cdk import (
+    aws_lambda as lambda_,
+)
+from aws_cdk import (
+    aws_s3 as s3,
+)
+from aws_cdk import (
+    aws_s3_deployment as s3deploy,
+)
+from aws_cdk import (
+    custom_resources as cr,
+)
 from constructs import Construct
-
-from .gateway_stack import AgentCoreGatewayStack
 
 
 class ActuarialToolsStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        bucket_suffix = str(uuid.uuid4())[:8]
+        unique_id = str(uuid.uuid4())[:8]
 
         # S3 Buckets
         claims_bucket = s3.Bucket(
             self,
             "ClaimsBucket",
-            bucket_name=f"actuarial-claims-{self.account}-{bucket_suffix}",
+            bucket_name=f"{self.stack_name}-claims-{unique_id}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
         )
@@ -32,7 +66,7 @@ class ActuarialToolsStack(Stack):
         athena_results_bucket = s3.Bucket(
             self,
             "AthenaResultsBucket",
-            bucket_name=f"actuarial-athena-results-{self.account}-{bucket_suffix}",
+            bucket_name=f"{self.stack_name}-athena-results-{unique_id}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
         )
@@ -51,7 +85,7 @@ class ActuarialToolsStack(Stack):
             "ClaimsDatabase",
             catalog_id=self.account,
             database_input=glue.CfnDatabase.DatabaseInputProperty(
-                name=f"claims_db_{bucket_suffix}",
+                name=f"{self.stack_name}-claims-db-{unique_id}",
                 description="Database for insurance claims data",
             ),
         )
@@ -71,9 +105,9 @@ class ActuarialToolsStack(Stack):
         glue_crawler = glue.CfnCrawler(
             self,
             "ClaimsCrawler",
-            name=f"claims-crawler-{bucket_suffix}",
+            name=f"{self.stack_name}-claims-crawler-{unique_id}",
             role=crawler_role.role_arn,
-            database_name=f"claims_db_{bucket_suffix}",
+            database_name=f"{self.stack_name}-claims-db-{unique_id}",
             targets=glue.CfnCrawler.TargetsProperty(
                 s3_targets=[
                     glue.CfnCrawler.S3TargetProperty(
@@ -87,9 +121,22 @@ class ActuarialToolsStack(Stack):
         )
         glue_crawler.add_dependency(glue_database)
 
-        # Custom resource to start crawler
-        from aws_cdk import custom_resources as cr
+        # Athena Workgroup
+        athena.CfnWorkGroup(
+            self,
+            "ActuarialWorkGroup",
+            name=f"actuarial-workgroup-{unique_id}",
+            description="Workgroup for actuarial analysis queries",
+            work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
+                result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
+                    output_location=f"s3://{athena_results_bucket.bucket_name}/query-results/"
+                ),
+                enforce_work_group_configuration=True,
+                publish_cloud_watch_metrics_enabled=True,
+            ),
+        )
 
+        # Custom resource to start crawler
         cr.AwsCustomResource(
             self,
             "StartCrawlerCustomResource",
@@ -112,23 +159,11 @@ class ActuarialToolsStack(Stack):
             ),
         )
 
-        # Athena Workgroup configuration is handled by the workgroup name in environment variables
-
         # Lambda Layers
-        self._build_agentcore_layer()
-
         data_wrangler_layer = lambda_.LayerVersion.from_layer_version_arn(
             self,
             "AWSDataWranglerLayer",
             layer_version_arn=f"arn:aws:lambda:{self.region}:336392948345:layer:AWSSDKPandas-Python312:20",
-        )
-
-        agentcore_layer = lambda_.LayerVersion(
-            self,
-            "AgentCoreLayer",
-            code=lambda_.Code.from_asset("cdk.out/agentcore_layer"),
-            compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],
-            description="AgentCore layer built with Docker for Linux Lambda environment",
         )
 
         # Lambda Build
@@ -138,123 +173,79 @@ class ActuarialToolsStack(Stack):
         os.makedirs(lambda_build_dir, exist_ok=True)
         shutil.copytree("tools", lambda_build_dir, dirs_exist_ok=True)
 
-        # AgentCore Memory
-        memory_creator_lambda = self._create_memory_lambda(agentcore_layer)
-        memory_resource = CustomResource(
+        # AgentCore Memory (native CFN construct)
+        memory = bedrockagentcore.CfnMemory(
             self,
             "AgentCoreMemory",
-            service_token=memory_creator_lambda.function_arn,
-            resource_type="Custom::AgentCoreMemory",
+            name=f"ActuarialAgentMemory_{unique_id}",
+            event_expiry_duration=7,  # 7 days (minimum allowed)
+            description="Memory for actuarial agent conversations and data",
+            memory_strategies=[
+                bedrockagentcore.CfnMemory.MemoryStrategyProperty(
+                    summary_memory_strategy=bedrockagentcore.CfnMemory.SummaryMemoryStrategyProperty(
+                        name="SessionSummarizer",
+                        namespaces=["/summaries/{actorId}/{sessionId}"],
+                    )
+                )
+            ],
         )
-        memory_id = memory_resource.get_att_string("MemoryId")
+        memory_id = memory.attr_memory_id
 
         # Actuarial Lambda
         actuarial_lambda = self._create_actuarial_lambda(
-            bucket_suffix,
+            unique_id,
             claims_bucket,
             athena_results_bucket,
             data_wrangler_layer,
-            agentcore_layer,
             memory_id,
-            memory_resource,
+            memory,
         )
 
         # Data Query Lambda
         data_query_lambda = self._create_data_query_lambda(
-            bucket_suffix,
+            unique_id,
             claims_bucket,
             athena_results_bucket,
             data_wrangler_layer,
-            agentcore_layer,
             memory_id,
-            memory_resource,
+            memory,
         )
 
-        # AgentCore Gateway (as nested stack)
-        gateway_stack = AgentCoreGatewayStack(
-            self,
-            "GatewayStack",
-            actuarial_lambda_arn=actuarial_lambda.function_arn,
-            data_query_lambda_arn=data_query_lambda.function_arn,
-        )
+        # Native MCP Gateway (replacing nested stack)
+        (
+            gateway_url,
+            client_id,
+            client_secret,
+            user_pool_id,
+            token_endpoint,
+            scope,
+            domain_prefix,
+        ) = self._create_native_gateway(actuarial_lambda, data_query_lambda)
 
         # Outputs
         self._create_outputs(
             claims_bucket,
-            bucket_suffix,
+            unique_id,
             glue_crawler,
             actuarial_lambda,
             data_query_lambda,
-            gateway_stack,
-        )
-
-    def _build_agentcore_layer(self):
-        layer_dir = "cdk.out/agentcore_layer"
-
-        if os.path.exists(layer_dir):
-            shutil.rmtree(layer_dir)
-        os.makedirs(layer_dir, exist_ok=True)
-
-        with open(
-            os.path.join(layer_dir, "requirements.txt"), "w", encoding="utf-8"
-        ) as f:
-            f.write("bedrock-agentcore\n")
-
-        shutil.copy2("cdk/Dockerfile.agentcore", os.path.join(layer_dir, "Dockerfile"))
-
-        subprocess.run(
-            ["docker", "build", "-t", "agentcore-layer", layer_dir], check=True
-        )
-        subprocess.run(
-            [
-                "docker",
-                "run",
-                "--rm",
-                "-v",
-                f"{os.path.abspath(layer_dir)}:/output",
-                "agentcore-layer",
-            ],
-            check=True,
-        )
-
-    def _create_memory_lambda(self, agentcore_layer):
-        memory_creator_role = iam.Role(
-            self,
-            "MemoryCreatorRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "service-role/AWSLambdaBasicExecutionRole"
-                )
-            ],
-        )
-
-        memory_creator_role.add_to_policy(
-            iam.PolicyStatement(
-                actions=["bedrock:*", "bedrock-agentcore:*"], resources=["*"]
-            )
-        )
-
-        return lambda_.Function(
-            self,
-            "MemoryCreatorLambda",
-            runtime=lambda_.Runtime.PYTHON_3_12,
-            handler="index.handler",
-            role=memory_creator_role,
-            timeout=Duration.minutes(5),
-            layers=[agentcore_layer],
-            code=lambda_.Code.from_inline(self._get_memory_lambda_code()),
+            gateway_url,
+            client_id,
+            client_secret,
+            user_pool_id,
+            token_endpoint,
+            scope,
+            domain_prefix,
         )
 
     def _create_actuarial_lambda(
         self,
-        bucket_suffix,
+        unique_id,
         claims_bucket,
         athena_results_bucket,
         data_wrangler_layer,
-        agentcore_layer,
         memory_id,
-        memory_resource,
+        memory,
     ):
         lambda_role = iam.Role(
             self,
@@ -288,8 +279,8 @@ class ActuarialToolsStack(Stack):
                 actions=["glue:GetDatabase", "glue:GetTable", "glue:GetPartitions"],
                 resources=[
                     f"arn:aws:glue:{self.region}:{self.account}:catalog",
-                    f"arn:aws:glue:{self.region}:{self.account}:database/claims_db_{bucket_suffix}",
-                    f"arn:aws:glue:{self.region}:{self.account}:table/claims_db_{bucket_suffix}/claims",
+                    f"arn:aws:glue:{self.region}:{self.account}:database/{self.stack_name}-claims-db-{unique_id}",
+                    f"arn:aws:glue:{self.region}:{self.account}:table/{self.stack_name}-claims-db-{unique_id}/claims",
                 ],
             )
         )
@@ -319,27 +310,27 @@ class ActuarialToolsStack(Stack):
         actuarial_lambda = lambda_.Function(
             self,
             "ActuarialToolsLambda",
-            function_name=f"actuarial-tools-{bucket_suffix}",
+            function_name=f"{self.stack_name}-actuarial-tools-{unique_id}",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="agentcore_lambda.lambda_handler",
             code=lambda_.Code.from_asset("cdk.out/lambda_build"),
             role=lambda_role,
             timeout=Duration.minutes(5),
             memory_size=1024,
-            layers=[data_wrangler_layer, agentcore_layer],
+            layers=[data_wrangler_layer],
             environment={
                 "CLAIMS_BUCKET": claims_bucket.bucket_name,
-                "ATHENA_DATABASE": f"claims_db_{bucket_suffix}",
+                "ATHENA_DATABASE": f"{self.stack_name}-claims-db-{unique_id}",
                 "ATHENA_TABLE": "claims",
                 "DEFAULT_TABLE_NAME": "claims",
-                "ATHENA_WORKGROUP": f"actuarial-workgroup-{bucket_suffix}",
+                "ATHENA_WORKGROUP": f"actuarial-workgroup-{unique_id}",
                 "ATHENA_OUTPUT_LOCATION": f"s3://{athena_results_bucket.bucket_name}/query-results/",
                 "AGENTCORE_MEMORY_ID": memory_id,
                 "ACTOR_ID": "ActuarialAgent",
             },
         )
 
-        actuarial_lambda.node.add_dependency(memory_resource)
+        actuarial_lambda.node.add_dependency(memory)
         actuarial_lambda.add_permission(
             "AllowAgentCoreInvoke",
             principal=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
@@ -350,13 +341,12 @@ class ActuarialToolsStack(Stack):
 
     def _create_data_query_lambda(
         self,
-        bucket_suffix,
+        unique_id,
         claims_bucket,
         athena_results_bucket,
         data_wrangler_layer,
-        agentcore_layer,
         memory_id,
-        memory_resource,
+        memory,
     ):
         data_query_role = iam.Role(
             self,
@@ -421,25 +411,25 @@ class ActuarialToolsStack(Stack):
         data_query_lambda = lambda_.Function(
             self,
             "DataQueryLambda",
-            function_name=f"data-query-tools-{bucket_suffix}",
+            function_name=f"{self.stack_name}-data-query-tools-{unique_id}",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="data_query_lambda.lambda_handler",
             code=lambda_.Code.from_asset("cdk.out/lambda_build"),
             role=data_query_role,
             timeout=Duration.minutes(5),
             memory_size=512,
-            layers=[data_wrangler_layer, agentcore_layer],
+            layers=[data_wrangler_layer],
             environment={
-                "ATHENA_DATABASE": f"claims_db_{bucket_suffix}",
+                "ATHENA_DATABASE": f"{self.stack_name}-claims-db-{unique_id}",
                 "DEFAULT_TABLE_NAME": "claims",
-                "ATHENA_WORKGROUP": f"actuarial-workgroup-{bucket_suffix}",
+                "ATHENA_WORKGROUP": f"actuarial-workgroup-{unique_id}",
                 "ATHENA_OUTPUT_LOCATION": f"s3://{athena_results_bucket.bucket_name}/query-results/",
                 "AGENTCORE_MEMORY_ID": memory_id,
                 "ACTOR_ID": "ActuarialAgent",
             },
         )
 
-        data_query_lambda.node.add_dependency(memory_resource)
+        data_query_lambda.node.add_dependency(memory)
         data_query_lambda.add_permission(
             "AllowAgentCoreInvokeDataQuery",
             principal=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
@@ -448,18 +438,225 @@ class ActuarialToolsStack(Stack):
 
         return data_query_lambda
 
+    def _create_native_gateway(self, actuarial_lambda, data_query_lambda):
+        # Cognito domain prefix (must be globally unique & match pattern)
+        raw_prefix = f"{self.stack_name}-{self.account[-6:]}"
+        sanitized = (
+            re.sub("[^a-z0-9-]", "-", raw_prefix.lower()).strip("-")[:40] or "app"
+        )
+        h = hashlib.sha256(raw_prefix.encode("utf-8")).hexdigest()[:6]
+        domain_prefix = f"{sanitized}-{h}"
+
+        # Cognito User Pool (machine-to-machine auth via client credentials)
+        user_pool = cognito.UserPool(
+            self,
+            "ActuarialUserPool",
+            user_pool_name=f"{self.stack_name}-user-pool",
+            password_policy=cognito.PasswordPolicy(
+                min_length=8,
+                require_uppercase=True,
+                require_lowercase=True,
+                require_digits=True,
+                require_symbols=True,
+            ),
+            mfa=cognito.Mfa.OFF,
+            account_recovery=cognito.AccountRecovery.EMAIL_AND_PHONE_WITHOUT_MFA,
+        )
+
+        # Hosted Cognito domain
+        user_pool_domain = user_pool.add_domain(
+            "ActuarialUserPoolDomain",
+            cognito_domain=cognito.CognitoDomainOptions(domain_prefix=domain_prefix),
+        )
+
+        # Add custom resource scope for the gateway
+        resource_server_name = f"{self.stack_name.lower()}-pool"
+        custom_scope_name = "invoke"
+
+        # Create the scope object first
+        invoke_scope = cognito.ResourceServerScope(
+            scope_name=custom_scope_name,
+            scope_description="Scope for invoking the agentcore gateway",
+        )
+
+        resource_server = user_pool.add_resource_server(
+            "ActuarialResourceServer",
+            identifier=resource_server_name,
+            user_pool_resource_server_name=resource_server_name,
+            scopes=[invoke_scope],
+        )
+
+        user_pool_client = cognito.UserPoolClient(
+            self,
+            "ActuarialUserPoolClient",
+            user_pool=user_pool,
+            user_pool_client_name=f"{self.stack_name}-client",
+            generate_secret=True,
+            supported_identity_providers=[
+                cognito.UserPoolClientIdentityProvider.COGNITO
+            ],
+            o_auth=cognito.OAuthSettings(
+                flows=cognito.OAuthFlows(client_credentials=True),
+                scopes=[
+                    cognito.OAuthScope.resource_server(resource_server, invoke_scope)
+                ],
+            ),
+            refresh_token_validity=Duration.days(30),
+            auth_session_validity=Duration.minutes(3),
+            enable_token_revocation=True,
+        )
+
+        # IAM role for the AgentCore Gateway
+        gateway_role = iam.Role(
+            self,
+            "ActuarialGatewayRole",
+            assumed_by=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
+            inline_policies={
+                "GatewayPolicy": iam.PolicyDocument(
+                    statements=[
+                        iam.PolicyStatement(
+                            sid="BedrockAgentCoreFullAccess",
+                            effect=iam.Effect.ALLOW,
+                            actions=["bedrock-agentcore:*"],
+                            resources=["arn:aws:bedrock-agentcore:*:*:*"],
+                        ),
+                        iam.PolicyStatement(
+                            sid="GetSecretValue",
+                            effect=iam.Effect.ALLOW,
+                            actions=["secretsmanager:GetSecretValue"],
+                            resources=["*"],
+                        ),
+                        iam.PolicyStatement(
+                            sid="LambdaInvokeAccess",
+                            effect=iam.Effect.ALLOW,
+                            actions=["lambda:InvokeFunction"],
+                            resources=["arn:aws:lambda:*:*:function:*"],
+                        ),
+                    ]
+                )
+            },
+        )
+
+        # MCP Gateway (native L1 construct)
+        mcp_gateway = bedrockagentcore.CfnGateway(
+            self,
+            "ActuarialMCPGateway",
+            name=f"{self.stack_name.lower()}-actuarial-gateway",
+            protocol_type="MCP",
+            authorizer_type="CUSTOM_JWT",
+            authorizer_configuration=bedrockagentcore.CfnGateway.AuthorizerConfigurationProperty(
+                custom_jwt_authorizer=bedrockagentcore.CfnGateway.CustomJWTAuthorizerConfigurationProperty(
+                    discovery_url=f"https://cognito-idp.{self.region}.amazonaws.com/{user_pool.user_pool_id}/.well-known/openid-configuration",
+                    allowed_clients=[user_pool_client.user_pool_client_id],
+                )
+            ),
+            role_arn=gateway_role.role_arn,
+        )
+
+        # Add explicit dependency to ensure Cognito is created first
+        mcp_gateway.add_dependency(user_pool.node.default_child)
+        mcp_gateway.add_dependency(user_pool_client.node.default_child)
+
+        # Load MCP tool schemas from JSON
+        actuarial_tools_path = os.path.join(
+            os.path.dirname(__file__), "..", "tools", "agentcore_tools.json"
+        )
+        data_query_tools_path = os.path.join(
+            os.path.dirname(__file__), "..", "tools", "data_query_tools.json"
+        )
+
+        with open(actuarial_tools_path, encoding="utf-8") as f:
+            actuarial_tools = json.load(f)
+
+        with open(data_query_tools_path, encoding="utf-8") as f:
+            data_query_tools = json.load(f)["tools"]
+
+        # Gateway Targets
+        actuarial_target = bedrockagentcore.CfnGatewayTarget(
+            self,
+            "ActuarialGatewayTarget",
+            credential_provider_configurations=[
+                bedrockagentcore.CfnGatewayTarget.CredentialProviderConfigurationProperty(
+                    credential_provider_type="GATEWAY_IAM_ROLE",
+                )
+            ],
+            name="actuarial-lambda-target",
+            gateway_identifier=mcp_gateway.attr_gateway_identifier,
+            target_configuration=bedrockagentcore.CfnGatewayTarget.TargetConfigurationProperty(
+                mcp=bedrockagentcore.CfnGatewayTarget.McpTargetConfigurationProperty(
+                    lambda_=bedrockagentcore.CfnGatewayTarget.McpLambdaTargetConfigurationProperty(
+                        lambda_arn=actuarial_lambda.function_arn,
+                        tool_schema=bedrockagentcore.CfnGatewayTarget.ToolSchemaProperty(
+                            inline_payload=actuarial_tools
+                        ),
+                    )
+                )
+            ),
+        )
+
+        data_query_target = bedrockagentcore.CfnGatewayTarget(
+            self,
+            "DataQueryGatewayTarget",
+            credential_provider_configurations=[
+                bedrockagentcore.CfnGatewayTarget.CredentialProviderConfigurationProperty(
+                    credential_provider_type="GATEWAY_IAM_ROLE",
+                )
+            ],
+            name="data-query-lambda-target",
+            gateway_identifier=mcp_gateway.attr_gateway_identifier,
+            target_configuration=bedrockagentcore.CfnGatewayTarget.TargetConfigurationProperty(
+                mcp=bedrockagentcore.CfnGatewayTarget.McpTargetConfigurationProperty(
+                    lambda_=bedrockagentcore.CfnGatewayTarget.McpLambdaTargetConfigurationProperty(
+                        lambda_arn=data_query_lambda.function_arn,
+                        tool_schema=bedrockagentcore.CfnGatewayTarget.ToolSchemaProperty(
+                            inline_payload=data_query_tools
+                        ),
+                    )
+                )
+            ),
+        )
+
+        actuarial_target.add_dependency(mcp_gateway)
+        data_query_target.add_dependency(mcp_gateway)
+
+        # Return values for outputs
+        gateway_url = mcp_gateway.attr_gateway_url
+        client_id = user_pool_client.user_pool_client_id
+        client_secret = user_pool_client.user_pool_client_secret.unsafe_unwrap()
+        user_pool_id = user_pool.user_pool_id
+        token_endpoint = f"https://{user_pool_domain.domain_name}.auth.{self.region}.amazoncognito.com/oauth2/token"
+        scope = f"{resource_server_name}/{custom_scope_name}"
+
+        return (
+            gateway_url,
+            client_id,
+            client_secret,
+            user_pool_id,
+            token_endpoint,
+            scope,
+            domain_prefix,
+        )
+
     def _create_outputs(
         self,
         claims_bucket,
-        bucket_suffix,
+        unique_id,
         glue_crawler,
         actuarial_lambda,
         data_query_lambda,
-        gateway_stack,
+        gateway_url,
+        client_id,
+        client_secret,
+        user_pool_id,
+        token_endpoint,
+        scope,
+        domain_prefix,
     ):
         # Infrastructure outputs
         CfnOutput(self, "ClaimsBucketName", value=claims_bucket.bucket_name)
-        CfnOutput(self, "AthenaDatabase", value=f"claims_db_{bucket_suffix}")
+        CfnOutput(
+            self, "AthenaDatabase", value=f"{self.stack_name}-claims-db-{unique_id}"
+        )
         CfnOutput(self, "GlueCrawlerName", value=glue_crawler.name)
         CfnOutput(self, "LambdaFunctionName", value=actuarial_lambda.function_name)
         CfnOutput(self, "LambdaFunctionArn", value=actuarial_lambda.function_arn)
@@ -469,147 +666,37 @@ class ActuarialToolsStack(Stack):
         CfnOutput(
             self,
             "GatewayUrl",
-            value=gateway_stack.gateway_url,
+            value=gateway_url,
             description="AgentCore Gateway URL",
         )
         CfnOutput(
             self,
-            "GatewayId",
-            value=gateway_stack.gateway_id,
-            description="AgentCore Gateway ID",
-        )
-        CfnOutput(
-            self,
             "ClientId",
-            value=gateway_stack.client_id,
+            value=client_id,
             description="Cognito Client ID",
         )
         CfnOutput(
             self,
             "ClientSecret",
-            value=gateway_stack.client_secret,
+            value=client_secret,
             description="Cognito Client Secret",
         )
         CfnOutput(
             self,
             "UserPoolId",
-            value=gateway_stack.user_pool_id,
+            value=user_pool_id,
             description="Cognito User Pool ID",
         )
         CfnOutput(
             self,
             "TokenEndpoint",
-            value=gateway_stack.token_endpoint,
+            value=token_endpoint,
             description="OAuth Token Endpoint",
         )
-        CfnOutput(self, "Scope", value=gateway_stack.scope, description="OAuth Scope")
+        CfnOutput(self, "Scope", value=scope, description="OAuth Scope")
         CfnOutput(
             self,
             "DomainPrefix",
-            value=gateway_stack.domain_prefix,
+            value=domain_prefix,
             description="Cognito Domain Prefix",
         )
-
-    def _get_memory_lambda_code(self):
-        return """
-import json
-import time
-import cfnresponse
-import traceback
-
-def handler(event, context):
-    print(f"Event: {json.dumps(event)}")
-
-    try:
-        from bedrock_agentcore.memory import MemoryClient
-        client = MemoryClient(region_name='us-east-1')
-
-        if event['RequestType'] == 'Create':
-            print("Creating AgentCore memory...")
-            try:
-                memory = client.create_memory(
-                    name="ActuarialAgentMemory",
-                    description="Memory for actuarial agent conversations and data",
-                    strategies=[
-                        {
-                            'summaryMemoryStrategy': {
-                                'name': 'SessionSummarizer',
-                                'namespaces': ['/summaries/{actorId}/{sessionId}']
-                            }
-                        }
-                    ]
-                )
-
-                memory_id = memory.get("id")
-                if not memory_id:
-                    raise Exception("Failed to get memory ID from creation response")
-
-                print(f"Memory created with ID: {memory_id}")
-
-                max_wait = 300
-                wait_time = 0
-                while wait_time < max_wait:
-                    try:
-                        memories = client.list_memories()
-                        current_memory = next((m for m in memories if m.get('id') == memory_id), None)
-
-                        if current_memory:
-                            status = current_memory.get('status', 'UNKNOWN')
-                            print(f"Memory status: {status}")
-
-                            if status == 'ACTIVE':
-                                print("Memory resource is now ACTIVE.")
-                                cfnresponse.send(event, context, cfnresponse.SUCCESS,
-                                               {"MemoryId": memory_id}, memory_id)
-                                return
-                            elif status == 'FAILED':
-                                raise Exception(f"Memory resource creation FAILED with status: {status}")
-
-                        print("Waiting for memory to become active...")
-                        time.sleep(10)
-                        wait_time += 10
-
-                    except Exception as status_error:
-                        print(f"Error checking memory status: {status_error}")
-                        if wait_time > 60:
-                            raise Exception(f"Persistent error checking memory status: {status_error}")
-                        time.sleep(10)
-                        wait_time += 10
-
-                raise Exception(f"Timeout waiting for memory to become ACTIVE after {max_wait} seconds")
-
-            except Exception as create_error:
-                print(f"Error during memory creation: {create_error}")
-                print(f"Traceback: {traceback.format_exc()}")
-                raise create_error
-
-        elif event['RequestType'] == 'Delete':
-            memory_id = event.get('PhysicalResourceId')
-            if memory_id and memory_id != 'PLACEHOLDER_MEMORY_ID':
-                try:
-                    print(f"Deleting memory: {memory_id}")
-                    client.delete_memory(memory_id=memory_id)
-                    print("Memory deletion initiated successfully")
-                except Exception as delete_error:
-                    print(f"Error deleting memory: {delete_error}")
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-
-        elif event['RequestType'] == 'Update':
-            memory_id = event.get('PhysicalResourceId', 'PLACEHOLDER_MEMORY_ID')
-            cfnresponse.send(event, context, cfnresponse.SUCCESS,
-                           {"MemoryId": memory_id}, memory_id)
-
-        else:
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-
-    except ImportError as import_error:
-        error_msg = f"Failed to import bedrock_agentcore: {import_error}"
-        print(error_msg)
-        cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": error_msg})
-
-    except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}"
-        print(error_msg)
-        print(f"Full traceback: {traceback.format_exc()}")
-        cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": error_msg})
-"""

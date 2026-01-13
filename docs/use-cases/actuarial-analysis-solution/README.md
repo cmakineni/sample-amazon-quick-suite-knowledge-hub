@@ -47,7 +47,7 @@ Complete actuarial analysis solution with:
 actuarial-analytics-platform/
 ├── app.py                      # CDK deployment entry point
 ├── cdk.json                    # CDK configuration
-├── requirements.txt            # CDK dependencies
+├── pyproject.toml              # Project dependencies and configuration
 ├── deploy.sh                   # Deployment script
 ├── QUICKSUITE.md              # QuickSuite integration guide
 ├── tools/                      # Lambda function code
@@ -60,14 +60,13 @@ actuarial-analytics-platform/
 │   ├── fraud_detection.py     # Fraud scoring
 │   ├── risk_analysis.py       # Risk factor analysis
 │   ├── monitoring.py          # KPI monitoring
-│   ├── requirements.txt       # Lambda dependencies
+│   ├── pyproject.toml         # Lambda dependencies and configuration
 │   ├── utils/                 # Shared utilities
 │   │   ├── constants.py       # Centralized constants
 │   │   └── data_utils.py      # Common data functions
 │   └── bin/                   # CLI tools (optional)
 ├── cdk/                        # Infrastructure code
 │   ├── actuarial_stack.py     # CDK stack definition
-│   ├── Dockerfile.agentcore   # Docker build for layer
 │   └── README.md              # CDK deployment guide
 └── sample_data/                # Sample claims data
     └── claims.csv
@@ -90,7 +89,8 @@ git sparse-checkout set docs/use-cases/actuarial-analysis-solution
 
 ```bash
 npm install -g aws-cdk
-pip install -r requirements.txt
+pip install uv
+uv sync
 ```
 
 ### 3. Configure AWS

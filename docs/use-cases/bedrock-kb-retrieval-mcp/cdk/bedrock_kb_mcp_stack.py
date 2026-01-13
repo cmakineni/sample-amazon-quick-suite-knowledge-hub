@@ -1,15 +1,15 @@
 """
-Amazon Redshift Data Query MCP Integration Stack
+Amazon Bedrock Knowledge Base MCP Integration Stack
 
-CDK stack that deploys Amazon Redshift integration with Amazon Quick Suite
-using MCP (Model Context Protocol) through native BedrockAgentCore Gateway constructs.
+CDK stack that deploys Amazon Bedrock Knowledge Base integration with Amazon Quick Suite
+using MCP through BedrockAgentCore Gateway constructs.
 """
 
 import hashlib
 import json
+import logging
 import os
 import re
-from pathlib import Path
 
 from aws_cdk import (
     CfnOutput,
@@ -28,11 +28,29 @@ from aws_cdk import (
 from aws_cdk import (
     aws_lambda as _lambda,
 )
-from aws_cdk import aws_lambda_python_alpha as lambda_python
 from constructs import Construct
 
+# Log CDK version info for debugging
+logger = logging.getLogger(__name__)
 
-class RedshiftAgentCoreStack(Stack):
+try:
+    import aws_cdk
+
+    if os.getenv("CDK_DEBUG"):
+        logger.debug(
+            "CDK Version: %s",
+            getattr(aws_cdk, "__version__", "unknown"),
+        )
+        logger.debug(
+            "BedrockAgentCore available: %s",
+            hasattr(bedrockagentcore, "CfnGateway"),
+        )
+except Exception as e:
+    if os.getenv("CDK_DEBUG"):
+        logger.debug("CDK version check failed: %s", e)
+
+
+class BedrockKBNativeStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -44,10 +62,11 @@ class RedshiftAgentCoreStack(Stack):
         h = hashlib.sha256(raw_prefix.encode("utf-8")).hexdigest()[:6]
         domain_prefix = f"{sanitized}-{h}"
 
-        # IAM role for Redshift Lambda function
+        # IAM role for KB Lambda function
+        print("Creating Lambda IAM role...")
         lambda_role = iam.Role(
             self,
-            "RedshiftLambdaRole",
+            "BedrockKBLambdaRole",
             assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name(
@@ -55,25 +74,21 @@ class RedshiftAgentCoreStack(Stack):
                 )
             ],
             inline_policies={
-                "RedshiftDataAccess": iam.PolicyDocument(
+                "BedrockKnowledgeBaseAccess": iam.PolicyDocument(
                     statements=[
                         iam.PolicyStatement(
                             effect=iam.Effect.ALLOW,
                             actions=[
-                                # Redshift Provisioned Clusters
-                                "redshift:DescribeClusters",
-                                # Redshift Serverless
-                                "redshift-serverless:ListWorkgroups",
-                                "redshift-serverless:GetWorkgroup",
-                                "redshift-serverless:GetCredentials",
-                                # Redshift Data API (core functionality)
-                                "redshift-data:ExecuteStatement",
-                                "redshift-data:DescribeStatement",
-                                "redshift-data:GetStatementResult",
-                                "redshift-data:ListStatements",
-                                "redshift-data:CancelStatement",
-                                # IAM for temporary credentials (if needed)
-                                "sts:GetCallerIdentity",
+                                "bedrock:ListKnowledgeBases",
+                                "bedrock:GetKnowledgeBase",
+                                "bedrock:ListDataSources",
+                                "bedrock:GetDataSource",
+                                "bedrock:Retrieve",
+                                "bedrock-agent:ListKnowledgeBases",
+                                "bedrock-agent:GetKnowledgeBase",
+                                "bedrock-agent:ListDataSources",
+                                "bedrock-agent:GetDataSource",
+                                "bedrock-agent-runtime:Retrieve",
                             ],
                             resources=["*"],
                         ),
@@ -82,33 +97,29 @@ class RedshiftAgentCoreStack(Stack):
             },
         )
 
-        # Get path to tools directory
-        entry_path = str(Path(__file__).parent.parent.joinpath("tools"))
-
-        # Redshift Lambda function using PythonFunction
-        redshift_lambda = lambda_python.PythonFunction(
+        # KB Lambda function
+        kb_lambda = _lambda.Function(
             self,
-            "RedshiftLambda",
-            entry=entry_path,
+            "BedrockKBLambda",
             runtime=_lambda.Runtime.PYTHON_3_13,
-            index="redshift_agentcore_lambda.py",
-            handler="handler",
+            handler="kb_agentcore_lambda.handler",
+            code=_lambda.Code.from_asset("tools"),
             role=lambda_role,
-            timeout=Duration.minutes(15),
-            memory_size=1024,
+            timeout=Duration.minutes(5),
+            memory_size=512,
         )
 
         # Add permission for Bedrock AgentCore to invoke the Lambda
-        redshift_lambda.add_permission(
-            "RedshiftLambdaAllowAgentCoreInvoke",
+        kb_lambda.add_permission(
+            "BedrockKBLambdaAllowAgentCoreInvoke",
             principal=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
             action="lambda:InvokeFunction",
         )
 
-        # Cognito User Pool (machine-to-machine auth via client credentials)
+        # Cognito User Pool
         user_pool = cognito.UserPool(
             self,
-            "RedshiftUserPool",
+            "BedrockKBUserPool",
             user_pool_name=f"{self.stack_name}-user-pool",
             password_policy=cognito.PasswordPolicy(
                 min_length=8,
@@ -123,13 +134,13 @@ class RedshiftAgentCoreStack(Stack):
 
         # Hosted Cognito domain
         user_pool_domain = user_pool.add_domain(
-            "RedshiftUserPoolDomain",
+            "BedrockKBUserPoolDomain",
             cognito_domain=cognito.CognitoDomainOptions(domain_prefix=domain_prefix),
         )
 
         # Add custom resource scope for the gateway
         resource_server_name = f"{self.stack_name.lower()}-pool"
-        custom_scope_name = "invoke"
+        custom_scope_name = "invoke"  # Keep "invoke" as requested
 
         # Create the scope object first
         invoke_scope = cognito.ResourceServerScope(
@@ -138,15 +149,15 @@ class RedshiftAgentCoreStack(Stack):
         )
 
         resource_server = user_pool.add_resource_server(
-            "RedshiftResourceServer",
-            identifier=resource_server_name,
+            "BedrockKBResourceServer",
+            identifier=resource_server_name,  # Same as resource server name
             user_pool_resource_server_name=resource_server_name,
             scopes=[invoke_scope],
         )
 
         user_pool_client = cognito.UserPoolClient(
             self,
-            "RedshiftUserPoolClient",
+            "BedrockKBUserPoolClient",
             user_pool=user_pool,
             user_pool_client_name=f"{self.stack_name}-client",
             generate_secret=True,
@@ -167,7 +178,7 @@ class RedshiftAgentCoreStack(Stack):
         # IAM role for the AgentCore Gateway
         gateway_role = iam.Role(
             self,
-            "RedshiftGatewayRole",
+            "BedrockKBGatewayRole",
             assumed_by=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
             inline_policies={
                 "GatewayPolicy": iam.PolicyDocument(
@@ -195,11 +206,11 @@ class RedshiftAgentCoreStack(Stack):
             },
         )
 
-        # MCP Gateway (native L1 construct)
+        # MCP BedrockAgent Gateway
         mcp_gateway = bedrockagentcore.CfnGateway(
             self,
-            "RedshiftMCPGateway",
-            name=f"{self.stack_name.lower()}-redshift-gateway",
+            "BedrockKBMCPGateway",
+            name=f"{self.stack_name.lower()}-kb-gateway",
             protocol_type="MCP",
             authorizer_type="CUSTOM_JWT",
             authorizer_configuration=bedrockagentcore.CfnGateway.AuthorizerConfigurationProperty(
@@ -216,30 +227,30 @@ class RedshiftAgentCoreStack(Stack):
         mcp_gateway.add_dependency(user_pool_client.node.default_child)
 
         # Load MCP tool schema from JSON
-        redshift_tools_path = os.path.join(
-            os.path.dirname(__file__), "..", "tools", "redshift_agentcore_tools.json"
+        kb_tools_path = os.path.join(
+            os.path.dirname(__file__), "..", "tools", "kb_agentcore_tools.json"
         )
 
-        with open(redshift_tools_path, encoding="utf-8") as f:
-            redshift_tools = json.load(f)
+        with open(kb_tools_path, encoding="utf-8") as f:
+            kb_tools = json.load(f)
 
         # Gateway Target pointing to the Lambda function (MCP Lambda target)
         gateway_target = bedrockagentcore.CfnGatewayTarget(
             self,
-            "RedshiftGatewayTarget",
+            "BedrockKBGatewayTarget",
             credential_provider_configurations=[
                 bedrockagentcore.CfnGatewayTarget.CredentialProviderConfigurationProperty(
                     credential_provider_type="GATEWAY_IAM_ROLE",
                 )
             ],
-            name="redshift-lambda-target",
+            name="kb-lambda-target",
             gateway_identifier=mcp_gateway.attr_gateway_identifier,
             target_configuration=bedrockagentcore.CfnGatewayTarget.TargetConfigurationProperty(
                 mcp=bedrockagentcore.CfnGatewayTarget.McpTargetConfigurationProperty(
                     lambda_=bedrockagentcore.CfnGatewayTarget.McpLambdaTargetConfigurationProperty(
-                        lambda_arn=redshift_lambda.function_arn,
+                        lambda_arn=kb_lambda.function_arn,
                         tool_schema=bedrockagentcore.CfnGatewayTarget.ToolSchemaProperty(
-                            inline_payload=redshift_tools
+                            inline_payload=kb_tools
                         ),
                     )
                 )

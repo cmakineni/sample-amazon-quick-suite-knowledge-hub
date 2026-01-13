@@ -1,105 +1,242 @@
-# Redshift AgentCore Gateway CDK Infrastructure
+# CDK Infrastructure for Amazon Redshift Data Query MCP Integration
 
-AWS CDK infrastructure for Redshift AgentCore Gateway - Amazon Redshift MCP integration.
+This directory contains the AWS CDK infrastructure code for deploying the Amazon Redshift Data Query MCP integration with Amazon Quick Suite.
 
-## Architecture
+## Architecture Overview
 
-The CDK stack (`RedshiftAgentCoreStack`) deploys:
+The CDK stack deploys the following AWS resources:
 
-- **AgentCore Gateway**: Bedrock AgentCore Gateway with Lambda target
-- **Lambda Function**: Redshift database operations handler
-- **Cognito User Pool**: OAuth2 authentication for QuickSuite MCP Actions
-- **IAM Roles**: Least-privilege permissions for Amazon Redshift access
-- **CloudWatch**: Logging and monitoring
+### Core Components
 
-## Stack Components
+- **Amazon Bedrock AgentCore Gateway**: MCP protocol gateway for Quick Suite integration
+- **AWS Lambda Function**: Processes Redshift queries using AWS LAB MCP Server
+- **Amazon Cognito User Pool**: Provides OAuth 2.0 authentication for secure access
+- **IAM Roles and Policies**: Implements least-privilege access controls
 
-### AgentCore Gateway
+## File Structure
 
-- **Type**: Amazon Bedrock AgentCore Gateway
-- **Target**: Lambda function for MCP tool execution
-- **Authentication**: Cognito User Pool with OAuth2
-- **Protocol**: Model Context Protocol (MCP)
+```
+cdk/
+├── redshift_agentcore_stack.py   # Main CDK stack definition
+├── README.md                     # This file
+└── __init__.py                  # Python package initialization
+```
 
-### Lambda Function
+## Stack Resources
 
-- **Runtime**: Python 3.12
-- **Handler**: `redshift_agentcore_lambda.handler`
-- **Memory**: 512 MB
-- **Timeout**: 5 minutes
-- **Concurrency**: 10 reserved executions
+### RedshiftAgentCoreStack
 
-### Authentication
+The main CDK stack creates:
 
-- **Type**: Cognito User Pool with OAuth2
-- **Flow**: Client credentials for service-to-service
-- **Password Policy**: Strong requirements
-- **Client Secret**: Generated for QuickSuite integration
+1. **Lambda Execution Role**
+   - Permissions for Redshift Data API operations
+   - CloudWatch Logs access for monitoring
+   - Follows AWS managed policy best practices
 
-### IAM Permissions (Read-Only)
+2. **Redshift Lambda Function**
+   - Runtime: Python 3.12
+   - Handler: `redshift_agentcore_lambda.handler`
+   - Timeout: 5 minutes
+   - Memory: 512 MB
+   - Source code from `../tools/` directory
 
-- `redshift:DescribeClusters`
-- `redshift-data:DescribeStatement`
-- `redshift-data:GetStatementResult`
-- `redshift-data:ListStatements`
-- `redshift-data:ExecuteStatement` (with read-only conditions)
-- `redshift-serverless:ListWorkgroups`
-- `redshift-serverless:GetWorkgroup`
+3. **Cognito User Pool**
+
+4. **MCP Gateway**
+   - Protocol type: MCP
+   - Authorization: Custom JWT (Cognito)
+   - Native Bedrock AgentCore integration
+
+5. **Gateway Target**
+   - Links MCP gateway to Lambda function
+   - Tool schema loaded from JSON configuration
+   - IAM role-based authentication
 
 ## Deployment
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### Prerequisites
 
-# Deploy stack
-cdk deploy --require-approval never
+Ensure you have the following installed and configured:
 
-# Get outputs
-aws cloudformation describe-stacks --stack-name RedshiftAgentCoreStack --query 'Stacks[0].Outputs'
-```
+- AWS CLI with valid credentials
+- AWS CDK v2 (`npm install -g aws-cdk`)
+- Python 3.11 or later
 
-## Outputs
+### Deploy the Stack
 
-The stack provides these outputs for QuickSuite MCP Actions integration:
+1. **Navigate to the project root**:
+   ```bash
+   cd docs/use-cases/redshift-data-query-mcp
+   ```
 
-- `GatewayUrl`: AgentCore Gateway endpoint
-- `ClientId`: Cognito client ID
-- `ClientSecret`: Cognito client secret
-- `CognitoTokenUrl`: OAuth2 token endpoint
-- `UserPoolId`: Cognito User Pool ID
-- `AgentCoreLambdaArn`: Lambda function ARN
+2. **Install Python dependencies**:
+   ```bash
+   uv sync
+   ```
 
-## Configuration
+3. **Bootstrap CDK (first time only)**:
+   ```bash
+   cdk bootstrap
+   ```
 
-### Environment Variables
+4. **Deploy the stack**:
+   ```bash
+   cdk deploy
+   ```
 
-Lambda function environment:
+5. **Save the outputs**: Note the following values for Quick Suite configuration:
+   - `GatewayUrl`: MCP gateway endpoint
+   - `ClientId`: Cognito client ID
+   - `ClientSecret`: Cognito client secret
+   - `CognitoTokenUrl`: OAuth token endpoint
+   - `UserPoolId`: Cognito user pool identifier
 
-- `LOG_LEVEL`: INFO
-- `POWERTOOLS_SERVICE_NAME`: redshift-agentcore
+### Cleanup
 
-### Resource Naming
-
-All resources use the stack name prefix for consistent naming and easy identification.
-
-## Security
-
-- **Least Privilege**: IAM roles with minimal required permissions
-- **Authentication**: OAuth2 with Cognito for MCP Actions
-- **Encryption**: All data encrypted in transit and at rest
-- **Logging**: Comprehensive CloudWatch logging for audit trails
-
-## Monitoring
-
-- **CloudWatch Logs**: Lambda execution logs with 30-day retention
-- **AgentCore Metrics**: Request/response metrics and throttling
-- **Lambda Metrics**: Duration, errors, and concurrency tracking
-
-## Cleanup
+To remove all deployed resources:
 
 ```bash
 cdk destroy
 ```
 
-This removes all resources created by the stack.
+## Configuration
+
+### Environment Variables
+
+The stack uses the following CDK context values:
+
+- `account`: AWS account ID (auto-detected)
+- `region`: AWS region (defaults to us-east-1)
+
+### Customization
+
+You can customize the deployment by modifying `redshift_agentcore_stack.py`:
+
+- **Lambda Configuration**: Adjust memory, timeout, or runtime
+- **Cognito Settings**: Modify authentication flow or domain prefix
+- **IAM Permissions**: Add or remove service permissions as needed
+
+## Security Considerations
+
+### IAM Permissions
+
+The stack implements least-privilege access:
+
+- Lambda execution role has minimal Redshift permissions
+- Gateway role limited to AgentCore operations
+- No cross-account access by default
+
+### Authentication
+
+- OAuth 2.0 client credentials flow
+- JWT tokens with configurable expiration
+- Cognito-managed client secrets
+
+## Monitoring and Troubleshooting
+
+### CloudWatch Integration
+
+The stack automatically creates:
+- Lambda function log groups
+- CloudWatch metrics for all services
+- Error tracking and alerting capabilities
+
+### Common Issues
+
+**Deployment Failures**:
+- Verify AWS credentials and permissions
+- Check CDK version compatibility
+- Ensure unique resource names
+
+**Runtime Errors**:
+- Check Lambda function logs in CloudWatch
+- Verify IAM permissions for Redshift access
+- Confirm tool schema JSON is valid
+
+### Debugging
+
+Enable verbose CDK output:
+```bash
+cdk deploy --verbose
+```
+
+View CloudFormation events:
+```bash
+aws cloudformation describe-stack-events --stack-name RedshiftAgentCoreStack
+```
+
+## Best Practices
+
+### Development
+
+- Use CDK context for environment-specific configuration
+- Implement proper error handling in Lambda functions
+- Follow AWS naming conventions for resources
+
+### Production
+
+- Enable CloudTrail for audit logging
+- Configure backup and disaster recovery
+- Implement monitoring and alerting
+- Use AWS Secrets Manager for sensitive configuration
+
+## Additional Resources
+
+- [AWS CDK Developer Guide](https://docs.aws.amazon.com/cdk/)
+- [Amazon Redshift Data API Documentation](https://docs.aws.amazon.com/redshift/latest/mgmt/data-api.html)
+- [AWS Lambda Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html)
+- [Amazon Cognito Developer Guide](https://docs.aws.amazon.com/cognito/)
+
+## Deployment
+
+```bash
+uv pip install -e .
+cdk deploy --require-approval never
+aws cloudformation describe-stacks --stack-name RedshiftAgentCoreStack --query 'Stacks[0].Outputs'
+```
+
+## Outputs
+
+The stack provides these outputs for Amazon Quick Suite MCP Actions integration:
+
+- `GatewayUrl`: Amazon Bedrock Agent Runtime endpoint
+- `ClientId`: Amazon Cognito client ID
+- `ClientSecret`: Amazon Cognito client secret
+- `CognitoTokenUrl`: OAuth2 token endpoint
+- `UserPoolId`: Amazon Cognito User Pool ID
+- `AgentCoreLambdaArn`: AWS Lambda function ARN
+
+## Configuration
+
+### Environment Variables
+
+AWS Lambda function environment variables:
+
+- `LOG_LEVEL`: INFO
+
+### Resource Naming
+
+All AWS resources use the stack name prefix for consistent naming and easy identification.
+
+## Security
+
+- **Least Privilege**: AWS IAM roles with minimal required permissions
+- **Authentication**: OAuth2 with Amazon Cognito for MCP Actions
+- **Encryption**: All data encrypted in transit and at rest
+- **Logging**: Comprehensive Amazon CloudWatch logging for audit trails
+
+## Monitoring
+
+- **Amazon CloudWatch Logs**: AWS Lambda execution logs with 30-day retention
+- **Amazon Bedrock Agent Runtime Metrics**: Request/response metrics and throttling
+- **AWS Lambda Metrics**: Duration, errors, and concurrency tracking
+
+## Cleanup
+
+To remove all AWS resources created by this stack:
+
+```bash
+cdk destroy
+```
+
+This command removes all resources created by the AWS CDK stack.

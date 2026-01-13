@@ -14,6 +14,7 @@ dependencies = [
 dev = [
     "ruff>=0.1.8",
     "bandit[toml]>=1.7.5",
+    "safety>=3.0.0",
     "pbr>=6.0.0",
     "pre-commit>=3.6.0",
 ]
@@ -56,10 +57,3 @@ indent-style = "space"
 [tool.bandit]
 exclude_dirs = ["tests", "node_modules"]
 skips = ["B101"] # Skip assert_used test
-
-[dependency-groups]
-dev = [
-    "bandit[toml]>=1.9.2",
-    "pre-commit>=4.5.1",
-    "ruff>=0.14.11",
-]

@@ -1,21 +1,5 @@
 [
   {
-    "description": "Execute SQL query and store results in memory",
-    "inputSchema": {
-      "properties": {
-        "sql_query": {
-          "description": "SQL query to execute",
-          "type": "string"
-        }
-      },
-      "required": [
-        "sql_query"
-      ],
-      "type": "object"
-    },
-    "name": "extract_data"
-  },
-  {
     "description": "Detect litigation indicators in claims using data from memory",
     "inputSchema": {
       "properties": {
