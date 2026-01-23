@@ -76,6 +76,7 @@ nav:
       - MCP:
         - Amazon Bedrock KB Retrieval MCP: integration/actions/MCP/bedrock-kb-retrieval-mcp/README.md
         - Amazon Redshift Data Query MCP: integration/actions/MCP/redshift-data-query-mcp/README.md
+        - Amazon Gateway AgentCore S3 MCP: integration/actions/MCP/gateway-agentcore-s3-crud-mcp/README.md
       - Asana: integration/actions/asana-action-setup-guide/README.md
       - Box: integration/actions/box-action-setup-guide/README.md
       - Confluence Cloud: integration/actions/confluence-cloud-knowledge-action-setup-guide/README.md

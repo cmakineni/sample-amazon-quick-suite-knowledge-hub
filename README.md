@@ -48,6 +48,7 @@ The structure is divided by integration type:
   * MCP (Model Context Protocol)
     * Bedrock KB Retrieval MCP
     * Redshift Data Query MCP
+    * Gateway AgentCore Lambda S3 CRUD MCP
   * ServiceNow (2LO)
   * Asana
   * Box
