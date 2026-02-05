@@ -65,7 +65,7 @@ nav:
     - Terraform: infrastructure as code/Terraform/README.md
   - Manage Quick Suite:
     - Identity: manage quick/Identity.md
-    - Observability: manage quick/Observability.md
+    - Observability: manage quick/observability-agent/README.md
     - Customization: manage quick/Customization.md
     - Security:
       - Guardrails: manage quick/Security/Guardrails.md
