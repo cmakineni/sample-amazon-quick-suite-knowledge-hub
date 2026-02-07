@@ -16,15 +16,27 @@ import re
 from pathlib import Path
 
 from aws_cdk import (
-    Stack,
-    Duration,
     CfnOutput,
     CustomResource,
-    aws_lambda as _lambda,
-    aws_iam as iam,
-    aws_cognito as cognito,
-    aws_logs as logs,
+    Duration,
+    Stack,
+)
+from aws_cdk import (
     aws_bedrockagentcore as bedrockagentcore,
+)
+from aws_cdk import (
+    aws_cognito as cognito,
+)
+from aws_cdk import (
+    aws_iam as iam,
+)
+from aws_cdk import (
+    aws_lambda as _lambda,
+)
+from aws_cdk import (
+    aws_logs as logs,
+)
+from aws_cdk import (
     custom_resources as cr,
 )
 from constructs import Construct
@@ -37,26 +49,26 @@ class QuickSuiteObservabilityMCPStack(Stack):
         # ====================================================================
         # PART 1: CloudWatch Log Groups
         # ====================================================================
-        
+
         # Import existing log groups instead of creating new ones
         chat_log_group = logs.LogGroup.from_log_group_name(
             self,
             "ChatLogsGroup",
             log_group_name="/aws/quicksuite/chat"
         )
-        
+
         feedback_log_group = logs.LogGroup.from_log_group_name(
             self,
             "FeedbackLogsGroup",
             log_group_name="/aws/quicksuite/feedback"
         )
-        
+
         agent_hours_log_group = logs.LogGroup.from_log_group_name(
             self,
             "AgentHoursLogsGroup",
             log_group_name="/aws/quicksuite/agent-hours"
         )
-        
+
         # Add resource policies to allow CloudWatch Logs delivery service
         for log_group_name in ["/aws/quicksuite/chat", "/aws/quicksuite/feedback", "/aws/quicksuite/agent-hours"]:
             logs.CfnResourcePolicy(
@@ -77,7 +89,7 @@ class QuickSuiteObservabilityMCPStack(Stack):
         # ====================================================================
         # PART 2: Enable Log Delivery (Custom Resource)
         # ====================================================================
-        
+
         enable_logging_role = iam.Role(
             self,
             "EnableLoggingRole",
@@ -125,7 +137,7 @@ class QuickSuiteObservabilityMCPStack(Stack):
                 ),
             },
         )
-        
+
         enable_logging_function = _lambda.Function(
             self,
             "EnableLoggingFunction",
@@ -144,14 +156,14 @@ def handler(event, context):
     request_type = event.get('RequestType', 'Create')
     account_id = context.invoked_function_arn.split(':')[4]
     region = context.invoked_function_arn.split(':')[3]
-    
+
     if request_type in ['Create', 'Update']:
         configs = [
             {'log_type': 'CHAT_LOGS', 'source': 'quicksuite-chat-logs-source', 'log_group': '/aws/quicksuite/chat', 'dest': 'quicksuite-chat-logs-destination'},
             {'log_type': 'FEEDBACK_LOGS', 'source': 'quicksuite-feedback-logs-source', 'log_group': '/aws/quicksuite/feedback', 'dest': 'quicksuite-feedback-logs-destination'},
             {'log_type': 'AGENT_HOURS_LOGS', 'source': 'quicksuite-agent-hours-logs-source', 'log_group': '/aws/quicksuite/agent-hours', 'dest': 'quicksuite-agent-hours-logs-destination'}
         ]
-        
+
         for config in configs:
             # Check if delivery already exists
             try:
@@ -159,7 +171,7 @@ def handler(event, context):
                 if config['source'] in [d['deliverySourceName'] for d in response.get('deliveries', [])]:
                     continue
             except: pass
-            
+
             # Create destination
             try:
                 logs_client.put_delivery_destination(
@@ -168,9 +180,9 @@ def handler(event, context):
                     deliveryDestinationConfiguration={'destinationResourceArn': f"arn:aws:logs:{region}:{account_id}:log-group:{config['log_group']}"}
                 )
             except: pass
-            
+
             time.sleep(1)
-            
+
             # Create source
             try:
                 logs_client.put_delivery_source(
@@ -179,9 +191,9 @@ def handler(event, context):
                     logType=config['log_type']
                 )
             except: pass
-            
+
             time.sleep(1)
-            
+
             # Create delivery
             try:
                 logs_client.create_delivery(
@@ -189,23 +201,23 @@ def handler(event, context):
                     deliveryDestinationArn=f"arn:aws:logs:{region}:{account_id}:delivery-destination:{config['dest']}"
                 )
             except: pass
-    
+
     return {'PhysicalResourceId': 'quicksuite-logging-enabled'}
             """),
         )
-        
+
         enable_logging_provider = cr.Provider(
             self,
             "EnableLoggingProvider",
             on_event_handler=enable_logging_function,
         )
-        
+
         enable_logging_cr = CustomResource(
             self,
             "EnableLoggingCustomResource",
             service_token=enable_logging_provider.service_token,
         )
-        
+
         enable_logging_cr.node.add_dependency(chat_log_group)
         enable_logging_cr.node.add_dependency(feedback_log_group)
         enable_logging_cr.node.add_dependency(agent_hours_log_group)
@@ -260,7 +272,7 @@ def handler(event, context):
 
         # Lambda function
         tools_dir = str(Path(__file__).parent.parent.joinpath("tools"))
-        
+
         mcp_function = _lambda.Function(
             self,
             "QuickSuiteObservabilityFunction",
@@ -395,7 +407,7 @@ def handler(event, context):
         tools_json_path = os.path.join(tools_dir, "quicksuite_observability_tools.json")
         with open(tools_json_path, encoding="utf-8") as f:
             tools_list = json.load(f)  # Direct array now
-            
+
             # Convert to CDK ToolDefinitionProperty format
             tools_schema = []
             for tool in tools_list:
@@ -477,21 +489,21 @@ def handler(event, context):
             value=mcp_function.function_arn,
             description="Lambda Function ARN",
         )
-        
+
         CfnOutput(
             self,
             "ChatLogGroup",
             value=chat_log_group.log_group_name,
             description="Chat logs CloudWatch Log Group",
         )
-        
+
         CfnOutput(
             self,
             "FeedbackLogGroup",
             value=feedback_log_group.log_group_name,
             description="Feedback logs CloudWatch Log Group",
         )
-        
+
         CfnOutput(
             self,
             "AgentHoursLogGroup",
