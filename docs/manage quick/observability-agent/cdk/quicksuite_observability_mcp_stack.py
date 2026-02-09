@@ -52,38 +52,40 @@ class QuickSuiteObservabilityMCPStack(Stack):
 
         # Import existing log groups instead of creating new ones
         chat_log_group = logs.LogGroup.from_log_group_name(
-            self,
-            "ChatLogsGroup",
-            log_group_name="/aws/quicksuite/chat"
+            self, "ChatLogsGroup", log_group_name="/aws/quicksuite/chat"
         )
 
         feedback_log_group = logs.LogGroup.from_log_group_name(
-            self,
-            "FeedbackLogsGroup",
-            log_group_name="/aws/quicksuite/feedback"
+            self, "FeedbackLogsGroup", log_group_name="/aws/quicksuite/feedback"
         )
 
         agent_hours_log_group = logs.LogGroup.from_log_group_name(
-            self,
-            "AgentHoursLogsGroup",
-            log_group_name="/aws/quicksuite/agent-hours"
+            self, "AgentHoursLogsGroup", log_group_name="/aws/quicksuite/agent-hours"
         )
 
         # Add resource policies to allow CloudWatch Logs delivery service
-        for log_group_name in ["/aws/quicksuite/chat", "/aws/quicksuite/feedback", "/aws/quicksuite/agent-hours"]:
+        for log_group_name in [
+            "/aws/quicksuite/chat",
+            "/aws/quicksuite/feedback",
+            "/aws/quicksuite/agent-hours",
+        ]:
             logs.CfnResourcePolicy(
                 self,
                 f"LogDeliveryPolicy{log_group_name.replace('/', '-')}",
                 policy_name=f"QuickSuiteLogDeliveryPolicy{log_group_name.replace('/', '-')}",
-                policy_document=json.dumps({
-                    "Version": "2012-10-17",
-                    "Statement": [{
-                        "Effect": "Allow",
-                        "Principal": {"Service": "delivery.logs.amazonaws.com"},
-                        "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-                        "Resource": f"arn:aws:logs:{self.region}:{self.account}:log-group:{log_group_name}:*"
-                    }]
-                })
+                policy_document=json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Principal": {"Service": "delivery.logs.amazonaws.com"},
+                                "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+                                "Resource": f"arn:aws:logs:{self.region}:{self.account}:log-group:{log_group_name}:*",
+                            }
+                        ],
+                    }
+                ),
             )
 
         # ====================================================================
@@ -415,7 +417,7 @@ def handler(event, context):
                     bedrockagentcore.CfnGatewayTarget.ToolDefinitionProperty(
                         name=tool["name"],
                         description=tool["description"],
-                        input_schema=tool["inputSchema"]
+                        input_schema=tool["inputSchema"],
                     )
                 )
 
