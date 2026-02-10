@@ -62,9 +62,9 @@ redshift-data-query-mcp/
 git clone --filter=blob:none --sparse https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub.git
 cd sample-amazon-quick-suite-knowledge-hub
 
-# Configure sparse checkout for this use case only
-git sparse-checkout set docs/use-cases/redshift-data-query-mcp
-cd docs/use-cases/redshift-data-query-mcp
+# Configure sparse checkout for this integration only
+git sparse-checkout set docs/integration/actions/MCP/redshift-data-query-mcp
+cd docs/integration/actions/MCP/redshift-data-query-mcp
 ```
 
 ### 2. Deploy AgentCore Gateway

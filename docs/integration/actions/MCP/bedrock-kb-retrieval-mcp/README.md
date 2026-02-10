@@ -53,9 +53,9 @@ bedrock-kb-retrieval-mcp/
 git clone --filter=blob:none --sparse https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub.git
 cd sample-amazon-quick-suite-knowledge-hub
 
-# Configure sparse checkout for this use case only
-git sparse-checkout set docs/use-cases/bedrock-kb-retrieval-mcp
-cd docs/use-cases/bedrock-kb-retrieval-mcp
+# Configure sparse checkout for this integration only
+git sparse-checkout set docs/integration/actions/MCP/bedrock-kb-retrieval-mcp
+cd docs/integration/actions/MCP/bedrock-kb-retrieval-mcp
 ```
 
 ### 2. Deploy AgentCore Gateway
