@@ -63,24 +63,18 @@ This architecture ensures a responsive, scalable solution that integrates seamle
 
 1. **Clone the repository**
 
-   ```bash
-   git clone https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub.git
-   cd docs/integration/actions/MCP/powerpoint-creator-mcp
-   ```
+    git clone https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub.git
+    cd docs/integration/actions/MCP/powerpoint-creator-mcp
 
 2. **Configure AWS region (optional)**
 
-   ```bash
-   # Edit main.tf or use terraform variables
-   export TF_VAR_aws_region="us-west-2"
-   ```
+    # Edit main.tf or use terraform variables
+    export TF_VAR_aws_region="us-west-2"
 
 3. **Deploy with Terraform**
 
-   ```bash
-   terraform init
-   terraform apply
-   ```
+    terraform init
+    terraform apply
 
 4. **Note the outputs**
    After deployment, save these values:
@@ -91,6 +85,7 @@ This architecture ensures a responsive, scalable solution that integrates seamle
 ### Custom Template (optional)
 
 Place your PowerPoint template at `templates/template.pptx`. The template should have:
+
 - A title slide (layout 0) with title and subtitle placeholders
 - A content slide layout (layout 1) for additional slides
 
@@ -98,7 +93,7 @@ Place your PowerPoint template at `templates/template.pptx`. The template should
 
 1. Go to Amazon Quick Suite --> Integrations --> Actions --> Model Context Protocol
 
-![MCP Integration](images/mcp_action_integration.png)
+    ![MCP Integration](images/mcp_action_integration.png)
 
 2. Enter a name, description and api_gateway_url from terraform output to MCP server endpoint and click Next
 
@@ -117,9 +112,7 @@ Place your PowerPoint template at `templates/template.pptx`. The template should
 
 ## Cleanup
 
-```bash
-terraform destroy
-```
+    terraform destroy
 
 Note: This will delete all generated presentations in S3.
 
