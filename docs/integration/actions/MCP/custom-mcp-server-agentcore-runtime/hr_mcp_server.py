@@ -11,9 +11,10 @@ This MCP server provides 5 HR-related tools that can be invoked by AI agents:
 The server uses FastMCP with stateless_http=True for AgentCore Runtime compatibility.
 """
 
-from mcp.server.fastmcp import FastMCP
-from datetime import datetime
 import json
+from datetime import datetime
+
+from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
 # - host="0.0.0.0" allows external connections (required for AgentCore Runtime)
@@ -51,26 +52,26 @@ SUPPORT_TICKETS = []
 @mcp.tool()
 def create_leave_request(employee_id: str, start_date: str, end_date: str, leave_type: str) -> str:
     """Create a leave request for an employee
-    
+
     This tool creates a new leave request in the system. It validates the employee exists,
     generates a unique request ID, and stores the request with a pending status.
-    
+
     Args:
         employee_id: Employee ID (e.g., EMP001) - Used to identify who is requesting leave
         start_date: Start date in YYYY-MM-DD format - First day of leave
         end_date: End date in YYYY-MM-DD format - Last day of leave
         leave_type: Type of leave (vacation, sick, personal) - Category for tracking
-    
+
     Returns:
         JSON string with success status, request ID, and full request details
-    
+
     Example:
         create_leave_request("EMP001", "2024-03-01", "2024-03-05", "vacation")
     """
     # Validate employee exists in the system
     if employee_id not in EMPLOYEES_DB:
         return f"Error: Employee {employee_id} not found"
-    
+
     # Create leave request object with auto-generated ID
     # Request ID format: LR001, LR002, etc.
     request = {
@@ -82,10 +83,10 @@ def create_leave_request(employee_id: str, start_date: str, end_date: str, leave
         "status": "pending",  # All new requests start as pending
         "created_at": datetime.now().isoformat()  # Timestamp for audit trail
     }
-    
+
     # Store the request (in production, this would be a database insert)
     LEAVE_REQUESTS.append(request)
-    
+
     # Return formatted JSON response
     return json.dumps({
         "success": True,
@@ -101,37 +102,37 @@ def create_leave_request(employee_id: str, start_date: str, end_date: str, leave
 @mcp.tool()
 def update_employee_record(employee_id: str, field: str, value: str) -> str:
     """Update an employee record field
-    
+
     This tool allows modification of specific employee fields. It validates both the
     employee existence and the field being updated to prevent unauthorized changes.
     Only 'department' and 'email' fields can be updated for security.
-    
+
     Args:
         employee_id: Employee ID (e.g., EMP001) - Target employee to update
         field: Field to update (department, email) - Which attribute to modify
         value: New value for the field - The updated information
-    
+
     Returns:
         JSON string with success status, old value, and new value for verification
-    
+
     Example:
         update_employee_record("EMP001", "email", "alice.new@company.com")
     """
     # Validate employee exists
     if employee_id not in EMPLOYEES_DB:
         return f"Error: Employee {employee_id} not found"
-    
+
     # Security check: Only allow updates to specific fields
     # This prevents unauthorized modification of sensitive data like leave_balance
     if field not in ["department", "email"]:
         return f"Error: Cannot update field '{field}'. Only 'department' and 'email' are allowed"
-    
+
     # Store old value for audit trail
     old_value = EMPLOYEES_DB[employee_id].get(field)
-    
+
     # Update the field
     EMPLOYEES_DB[employee_id][field] = value
-    
+
     # Return confirmation with before/after values
     return json.dumps({
         "success": True,
@@ -148,16 +149,16 @@ def update_employee_record(employee_id: str, field: str, value: str) -> str:
 @mcp.tool()
 def check_leave_balance(employee_id: str) -> str:
     """Check leave balance for an employee
-    
+
     This tool retrieves the current leave balance along with basic employee information.
     Useful for employees to check their remaining days before requesting leave.
-    
+
     Args:
         employee_id: Employee ID (e.g., EMP001) - Employee to check balance for
-    
+
     Returns:
         JSON string with employee name, department, and current leave balance
-    
+
     Example:
         check_leave_balance("EMP001")
         Returns: {"employee_id": "EMP001", "name": "Alice Johnson", "leave_balance": 15, ...}
@@ -165,10 +166,10 @@ def check_leave_balance(employee_id: str) -> str:
     # Validate employee exists
     if employee_id not in EMPLOYEES_DB:
         return f"Error: Employee {employee_id} not found"
-    
+
     # Retrieve employee data
     employee = EMPLOYEES_DB[employee_id]
-    
+
     # Return formatted response with relevant information
     return json.dumps({
         "employee_id": employee_id,
@@ -185,26 +186,26 @@ def check_leave_balance(employee_id: str) -> str:
 @mcp.tool()
 def create_support_ticket(employee_id: str, category: str, description: str) -> str:
     """Create an IT/HR support ticket
-    
+
     This tool creates support tickets for various employee issues (IT problems,
     HR questions, facilities requests). Tickets are auto-assigned a unique ID
     and tracked with timestamps.
-    
+
     Args:
         employee_id: Employee ID (e.g., EMP001) - Who is creating the ticket
         category: Ticket category (IT, HR, Facilities) - Department to route to
         description: Description of the issue - Detailed explanation of the problem
-    
+
     Returns:
         JSON string with success status, ticket ID, and full ticket details
-    
+
     Example:
         create_support_ticket("EMP001", "IT", "Laptop won't connect to VPN")
     """
     # Validate employee exists
     if employee_id not in EMPLOYEES_DB:
         return f"Error: Employee {employee_id} not found"
-    
+
     # Create ticket object with auto-generated ID
     # Ticket ID format: TKT0001, TKT0002, etc.
     ticket = {
@@ -215,10 +216,10 @@ def create_support_ticket(employee_id: str, category: str, description: str) -> 
         "status": "open",  # All new tickets start as open
         "created_at": datetime.now().isoformat()  # Timestamp for SLA tracking
     }
-    
+
     # Store the ticket (in production, this would trigger notifications)
     SUPPORT_TICKETS.append(ticket)
-    
+
     # Return confirmation with ticket details
     return json.dumps({
         "success": True,
@@ -234,20 +235,20 @@ def create_support_ticket(employee_id: str, category: str, description: str) -> 
 @mcp.tool()
 def get_employee_info(employee_id: str) -> str:
     """Get complete employee information
-    
+
     This tool provides a comprehensive view of an employee including:
     - Basic information (name, department, email, leave balance)
     - All leave requests (pending, approved, rejected)
     - All support tickets (open, closed)
-    
+
     This is useful for getting a complete overview in a single query.
-    
+
     Args:
         employee_id: Employee ID (e.g., EMP001) - Employee to retrieve information for
-    
+
     Returns:
         JSON string with complete employee profile, leave requests, and support tickets
-    
+
     Example:
         get_employee_info("EMP001")
         Returns: Full employee profile with all associated records
@@ -255,18 +256,18 @@ def get_employee_info(employee_id: str) -> str:
     # Validate employee exists
     if employee_id not in EMPLOYEES_DB:
         return f"Error: Employee {employee_id} not found"
-    
+
     # Get basic employee information
     employee = EMPLOYEES_DB[employee_id]
-    
+
     # Filter leave requests for this employee
     # This shows all historical leave requests, not just pending ones
     employee_leaves = [lr for lr in LEAVE_REQUESTS if lr["employee_id"] == employee_id]
-    
+
     # Filter support tickets for this employee
     # This shows all tickets regardless of status
     employee_tickets = [t for t in SUPPORT_TICKETS if t["employee_id"] == employee_id]
-    
+
     # Return comprehensive employee data
     return json.dumps({
         "employee_id": employee_id,
