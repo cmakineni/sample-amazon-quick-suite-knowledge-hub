@@ -1,3 +1,8 @@
+---
+category: Capability
+description: "Custom MCP Server on Amazon Bedrock AgentCore Runtime with Amazon Quick"
+---
+
 # HR MCP Server Workshop
 
 Deploy an HR MCP Server to Amazon Bedrock AgentCore Runtime and connect it to Amazon Quick.
