@@ -63,12 +63,11 @@ This architecture ensures a responsive, scalable solution that integrates seamle
 
 1. **Clone the repository**
 
-    git clone https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub.git
+    git clone <https://github.com/aws-samples/sample-amazon-quick-suite-knowledge-hub.git>
     cd docs/integration/actions/MCP/powerpoint-creator-mcp
 
 2. **Configure AWS region (optional)**
 
-    # Edit main.tf or use terraform variables
     export TF_VAR_aws_region="us-west-2"
 
 3. **Deploy with Terraform**
@@ -82,7 +81,7 @@ This architecture ensures a responsive, scalable solution that integrates seamle
    - `cloudfront_domain_name` - CDN for presentations
    - `s3_bucket_name` - Storage bucket
 
-### Custom Template (optional)
+## Custom Template (optional)
 
 Place your PowerPoint template at `templates/template.pptx`. The template should have:
 
