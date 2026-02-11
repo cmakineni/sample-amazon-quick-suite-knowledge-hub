@@ -1,0 +1,12 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Layer build artifacts
+layer/
+*.zip
+
+# Keep template file
+!templates/*.pptx
