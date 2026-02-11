@@ -29,14 +29,14 @@ EMPLOYEES_DB = {
         "name": "Alice Johnson",
         "department": "Engineering",
         "leave_balance": 15,  # Days of leave remaining
-        "email": "alice@company.com"
+        "email": "alice@company.com",
     },
     "EMP002": {
         "name": "Bob Smith",
         "department": "HR",
         "leave_balance": 20,
-        "email": "bob@company.com"
-    }
+        "email": "bob@company.com",
+    },
 }
 
 # In-memory storage for leave requests and tickets
@@ -50,7 +50,9 @@ SUPPORT_TICKETS = []
 # Why: Automates the leave request process without manual form filling
 # Use case: "I need to request vacation from March 1-5"
 @mcp.tool()
-def create_leave_request(employee_id: str, start_date: str, end_date: str, leave_type: str) -> str:
+def create_leave_request(
+    employee_id: str, start_date: str, end_date: str, leave_type: str
+) -> str:
     """Create a leave request for an employee
 
     This tool creates a new leave request in the system. It validates the employee exists,
@@ -81,18 +83,21 @@ def create_leave_request(employee_id: str, start_date: str, end_date: str, leave
         "end_date": end_date,
         "leave_type": leave_type,
         "status": "pending",  # All new requests start as pending
-        "created_at": datetime.now().isoformat()  # Timestamp for audit trail
+        "created_at": datetime.now().isoformat(),  # Timestamp for audit trail
     }
 
     # Store the request (in production, this would be a database insert)
     LEAVE_REQUESTS.append(request)
 
     # Return formatted JSON response
-    return json.dumps({
-        "success": True,
-        "message": f"Leave request {request['request_id']} created successfully",
-        "request": request
-    }, indent=2)
+    return json.dumps(
+        {
+            "success": True,
+            "message": f"Leave request {request['request_id']} created successfully",
+            "request": request,
+        },
+        indent=2,
+    )
 
 
 # Tool 2: Update Employee Record
@@ -134,12 +139,15 @@ def update_employee_record(employee_id: str, field: str, value: str) -> str:
     EMPLOYEES_DB[employee_id][field] = value
 
     # Return confirmation with before/after values
-    return json.dumps({
-        "success": True,
-        "message": f"Updated {field} for {employee_id}",
-        "old_value": old_value,
-        "new_value": value
-    }, indent=2)
+    return json.dumps(
+        {
+            "success": True,
+            "message": f"Updated {field} for {employee_id}",
+            "old_value": old_value,
+            "new_value": value,
+        },
+        indent=2,
+    )
 
 
 # Tool 3: Check Leave Balance
@@ -171,12 +179,15 @@ def check_leave_balance(employee_id: str) -> str:
     employee = EMPLOYEES_DB[employee_id]
 
     # Return formatted response with relevant information
-    return json.dumps({
-        "employee_id": employee_id,
-        "name": employee["name"],
-        "leave_balance": employee["leave_balance"],  # Days remaining
-        "department": employee["department"]
-    }, indent=2)
+    return json.dumps(
+        {
+            "employee_id": employee_id,
+            "name": employee["name"],
+            "leave_balance": employee["leave_balance"],  # Days remaining
+            "department": employee["department"],
+        },
+        indent=2,
+    )
 
 
 # Tool 4: Create Support Ticket
@@ -214,18 +225,21 @@ def create_support_ticket(employee_id: str, category: str, description: str) -> 
         "category": category,  # Used for routing to correct support team
         "description": description,
         "status": "open",  # All new tickets start as open
-        "created_at": datetime.now().isoformat()  # Timestamp for SLA tracking
+        "created_at": datetime.now().isoformat(),  # Timestamp for SLA tracking
     }
 
     # Store the ticket (in production, this would trigger notifications)
     SUPPORT_TICKETS.append(ticket)
 
     # Return confirmation with ticket details
-    return json.dumps({
-        "success": True,
-        "message": f"Support ticket {ticket['ticket_id']} created successfully",
-        "ticket": ticket
-    }, indent=2)
+    return json.dumps(
+        {
+            "success": True,
+            "message": f"Support ticket {ticket['ticket_id']} created successfully",
+            "ticket": ticket,
+        },
+        indent=2,
+    )
 
 
 # Tool 5: Get Employee Info
@@ -269,12 +283,16 @@ def get_employee_info(employee_id: str) -> str:
     employee_tickets = [t for t in SUPPORT_TICKETS if t["employee_id"] == employee_id]
 
     # Return comprehensive employee data
-    return json.dumps({
-        "employee_id": employee_id,
-        "info": employee,  # Basic employee information
-        "leave_requests": employee_leaves,  # All leave requests
-        "support_tickets": employee_tickets  # All support tickets
-    }, indent=2)
+    return json.dumps(
+        {
+            "employee_id": employee_id,
+            "info": employee,  # Basic employee information
+            "leave_requests": employee_leaves,  # All leave requests
+            "support_tickets": employee_tickets,  # All support tickets
+        },
+        indent=2,
+    )
+
 
 # Server entry point
 # This runs when the script is executed directly (not imported)
@@ -284,4 +302,3 @@ if __name__ == "__main__":
     # Start the MCP server with streamable-HTTP transport
     # This makes the server compatible with AgentCore Runtime's stateless architecture
     mcp.run(transport="streamable-http")
-
