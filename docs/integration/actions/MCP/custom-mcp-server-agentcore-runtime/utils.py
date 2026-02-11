@@ -12,16 +12,15 @@ Sets up complete Cognito authentication for AgentCore MCP Server + Q MCP Client:
 5. Test User           — for testing auth directly via user_password flow
 """
 
-import boto3
-import json
-import time
-import hmac
-import hashlib
 import base64
-from typing import Dict
+import hashlib
+import hmac
+import time
+
+import boto3
 
 
-def setup_cognito_user_pool() -> Dict[str, str]:
+def setup_cognito_user_pool() -> dict[str, str]:
     """
     Create and configure a Cognito User Pool for MCP server authentication.
 
@@ -93,7 +92,7 @@ def setup_cognito_user_pool() -> Dict[str, str]:
             'ScopeDescription': 'Access HR MCP Server'
         }]
     )
-    print(f"✓ Resource server created with scope: hr-mcp/access")
+    print("✓ Resource server created with scope: hr-mcp/access")
 
     # ── 4. Create App Client ─────────────────────────────────────────────
     # Single client that supports both flows:
@@ -115,7 +114,7 @@ def setup_cognito_user_pool() -> Dict[str, str]:
     client_id = client_response['UserPoolClient']['ClientId']
     client_secret = client_response['UserPoolClient']['ClientSecret']
     print(f"✓ App client created: {client_id}")
-    print(f"  Flows: client_credentials + user_password")
+    print("  Flows: client_credentials + user_password")
     print(f"  Secret: {client_secret[:10]}...")
 
     # ── 5. Create Test User ──────────────────────────────────────────────
@@ -158,7 +157,7 @@ def setup_cognito_user_pool() -> Dict[str, str]:
     )
     access_token = auth_response['AuthenticationResult']['AccessToken']
     refresh_token = auth_response['AuthenticationResult']['RefreshToken']
-    print(f"✓ Authentication tokens obtained")
+    print("✓ Authentication tokens obtained")
 
     # ── Build URLs ───────────────────────────────────────────────────────
     # Discovery URL: AgentCore uses this to validate JWT tokens
