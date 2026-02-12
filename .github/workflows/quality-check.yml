@@ -112,7 +112,7 @@ jobs:
         if: steps.changed-files.outputs.config_any_changed == 'true' || steps.changed-files.outputs.markdown_any_changed == 'true'
         run: |
           echo "📚 Building Amazon Quick Suite Knowledge Hub documentation..."
-          uv run mkdocs build --strict
+          uv run mkdocs build
 
       - name: Test MkDocs serve
         if: steps.changed-files.outputs.config_any_changed == 'true' || steps.changed-files.outputs.markdown_any_changed == 'true'

@@ -104,7 +104,7 @@ Place your PowerPoint template at `templates/template.pptx`. The template should
 ![Prompt](images/prompt.png)
 
 2. Ask the Chat Agent to create a powerpoint presentation based on the output from previous prompt. Review the information in the pop up window and submit.
-![Submit](images/Submit.png)
+![Submit](images/submit.png)
 
 3. Quick Suite will respond with a downloadable link to the created presentation. Copy and paste in a browser to download.
 ![Download](images/download.png)
