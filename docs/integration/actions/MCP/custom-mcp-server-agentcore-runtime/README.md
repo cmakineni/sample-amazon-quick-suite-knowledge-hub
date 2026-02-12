@@ -11,7 +11,7 @@ Deploy an HR MCP Server to Amazon Bedrock AgentCore Runtime and connect it to Am
 
 An MCP server with 5 HR tools deployed to AgentCore Runtime (no Docker), authenticated via Cognito, and accessible from Amazon Quick.
 
-```
+```text
 Amazon Quick  ──OAuth──▶  Cognito  ──JWT──▶  AgentCore Runtime  ──▶  HR MCP Server
   (client_credentials)    (domain +           (validates JWT)        (5 HR tools)
                            scope +
@@ -19,6 +19,7 @@ Amazon Quick  ──OAuth──▶  Cognito  ──JWT──▶  AgentCore Runti
 ```
 
 ### HR Tools
+
 | Tool | Description |
 |------|-------------|
 | `get_employee_info` | Retrieve complete employee details |
@@ -47,8 +48,10 @@ Upload these 4 files to SageMaker JupyterLab:
 Complete these steps **before** the workshop.
 
 ### 1. AWS Account
+
 - An AWS account with access to `us-east-1` region
 - Billing enabled (estimated workshop cost: < $5)
+
 
 ### 2. Create SageMaker IAM Execution Role
 
@@ -132,23 +135,29 @@ After Step 9, you'll get 4 values to paste into the Amazon Quick MCP Client inte
 | Token URL | `https://hr-mcp-1234.auth.us-east-1.amazoncognito.com/oauth2/token` |
 
 ### Sample Prompts
+
 - "What is the leave balance for EMP001?"
 - "Create a vacation request for EMP001 from March 1-5"
 - "Show me employee info for EMP002"
 - "Create an IT support ticket for EMP001 about VPN issues"
-- "Update the email for EMP001 to alice.new@company.com"
+- "Update the email for EMP001 to <alice.new@company.com>"
+
 
 ---
 
 ## Key Concepts
 
 ### Direct Code Deploy
+
 AgentCore supports deploying MCP servers by zipping Python code + dependencies and uploading directly — no Docker, no ECR, no Dockerfile. The `bedrock-agentcore-starter-toolkit` CLI handles packaging and deployment.
+
 
 **Important:** `requirements.txt` must only contain runtime dependencies. Do NOT include `boto3` or `bedrock-agentcore-starter-toolkit` — they bloat the package past the 750MB unzipped limit.
 
 ### Cognito Authentication
+
 Amazon Quick uses OAuth `client_credentials` flow:
+
 
 1. Quick sends `client_id` + `client_secret` to the Cognito token URL
 2. Cognito returns a JWT with scope `hr-mcp/access`
@@ -156,14 +165,19 @@ Amazon Quick uses OAuth `client_credentials` flow:
 4. AgentCore validates the JWT against the Cognito OIDC discovery URL
 
 **Required Cognito resources:**
+
 - **Domain** — without it, the `/oauth2/token` endpoint doesn't exist
 - **Resource Server + Scope** — `client_credentials` grant requires at least one scope
 - **App Client with Secret** — Quick requires `client_id` + `client_secret`
 
+
 ### AgentCore Execution Role
+
 The IAM role that AgentCore assumes to run your code. Trust policy must:
+
 - Allow `bedrock-agentcore.amazonaws.com` as principal
 - Include `aws:SourceAccount` and `aws:SourceArn` conditions
+
 
 ---
 
