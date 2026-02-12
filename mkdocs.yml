@@ -77,6 +77,7 @@ nav:
         - Amazon Bedrock KB Retrieval MCP: integration/actions/MCP/bedrock-kb-retrieval-mcp/README.md
         - Amazon Redshift Data Query MCP: integration/actions/MCP/redshift-data-query-mcp/README.md
         - Amazon Gateway AgentCore S3 MCP: integration/actions/MCP/gateway-agentcore-s3-crud-mcp/README.md
+        - Custom MCP Server AgentCore Runtime: integration/actions/MCP/custom-mcp-server-agentcore-runtime/README.md
         - Powerpoint Creator MCP: integration/actions/MCP/powerpoint-creator-mcp/README.md
       - Asana: integration/actions/asana-action-setup-guide/README.md
       - Box: integration/actions/box-action-setup-guide/README.md

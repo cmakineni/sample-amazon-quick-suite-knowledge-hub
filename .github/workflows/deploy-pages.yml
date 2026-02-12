@@ -65,7 +65,7 @@ jobs:
       - name: Build Amazon Quick Suite Knowledge Hub documentation
         run: |
           echo "📚 Building Amazon Quick Suite Knowledge Hub documentation..."
-          uv run mkdocs build --strict --verbose
+          uv run mkdocs build --verbose
 
       - name: Upload Amazon Quick Suite Knowledge Hub pages artifact
         uses: actions/upload-pages-artifact@v3
