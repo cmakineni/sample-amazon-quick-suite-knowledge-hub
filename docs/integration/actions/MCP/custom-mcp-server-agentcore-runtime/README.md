@@ -1,25 +1,18 @@
----
-category: Capability
-description: "Build your custom MCP Server in AgentCore Runtime and connect with Quick"
----
+# HR MCP Server Workshop
 
-# Build your custom MCP Server in AgentCore Runtime and connect with Quick
-
-Customers build AI agents and automations in Amazon Quick to analyze data, search enterprise knowledge, and run workflows across their business. Amazon Quick is a unified agentic AI workspace that empowers teams to analyze data, build intelligent agents, discover enterprise knowledge, and automate workflows, all in one place. Quick Suite supports Model Context Protocol (MCP) integrations for action execution, data access, and AI agent integration. MCP provides a standard way for AI applications and agents to discover and invoke tools exposed by external services.
-
-You can expose your application's capabilities as MCP tools by hosting your own MCP server, whether you're an independent software vendor (ISV), an enterprise integrating internal systems, or a developer building custom solutions. By configuring an MCP integration in Amazon Quick Suite, Quick acts as an MCP client and connects to your MCP server endpoint to access the tools you expose. After that connection is in place, Quick Suite AI agents and automations can invoke your tools to retrieve data and run actions in your product, using the customer's authentication, authorization, and governance controls.
-
-This approach gives you a repeatable integration contract: you define tools once, publish a stable endpoint, and support the same model across customers. Your customers get a way to use your product inside Quick Suite workflows, without building custom connectors for every use case.
-
-This workshop demonstrates how to build and deploy a custom MCP Server to Amazon Bedrock AgentCore Runtime and connect it to Amazon Quick. While this example uses HR APIs, you can adapt this pattern for any APIs—proprietary ISV providers, enterprise applications, or custom services.
-
-## Architecture
-
-![Architecture Diagram](images/architecture.png)
+Deploy an HR MCP Server to Amazon Bedrock AgentCore Runtime and connect it to Amazon Quick.
 
 ## What You'll Build
 
-An MCP server with 5 sample HR tools deployed to AgentCore Runtime, authenticated via Cognito, and accessible from Amazon Quick.
+An MCP server with 5 HR tools deployed to AgentCore Runtime (no Docker), authenticated via Cognito, and accessible from Amazon Quick.
+
+```text
+Amazon Quick  ──OAuth──▶  Cognito  ──JWT──▶  AgentCore Runtime  ──▶  HR MCP Server
+  (client_credentials)    (domain +           (validates JWT)        (5 HR tools)
+                           scope +
+                           secret)
+```
+
 
 ### HR Tools
 
@@ -181,21 +174,6 @@ The IAM role that AgentCore assumes to run your code. Trust policy must:
 - Allow `bedrock-agentcore.amazonaws.com` as principal
 - Include `aws:SourceAccount` and `aws:SourceArn` conditions
 
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| `AccessDeniedException` on any AWS call | Add `AdministratorAccess` to SageMaker execution role |
-| `zip utility not found` | Run `apt-get update -qq && apt-get install -y -qq zip` |
-| `Agent already exists` (ConflictException) | Add `--auto-update-on-conflict` to deploy command |
-| `Artifact size exceeds 750MB` | Remove `boto3` and toolkit from `requirements.txt`, use `--force-rebuild-deps` |
-| `Role validation failed` | Check trust policy has `bedrock-agentcore.amazonaws.com` with Condition keys |
-| `invalid_scope` on token URL | Ensure resource server with scope exists and client has `AllowedOAuthScopes` |
-| Kernel stuck on `[*]` | Kernel → Restart Kernel. Never use "Run All Cells" |
-| `Could not load tools` in Quick | Wait 1-2 minutes — first cold start takes time |
 
 ---
 
